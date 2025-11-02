@@ -1,0 +1,22 @@
+{
+    "name": "gisat1986/test",
+    "autoload": {
+        "psr-4": {
+            "Gisat1986\\Test\\": "src/",                
+            "Commands\\": "commands/"
+
+        }
+    },
+    "scripts": {
+    "start": [
+    "while true; do php -d max_execution_time=0 -S localhost:8080 index.php; echo '🔄 Server restart...'; sleep 1; done"
+  ]
+  },
+    "authors": [
+        {
+            "name": "GisatAZK2",
+            "email": "gisatazk2@gmail.com"
+        }
+    ],
+    "require": {}
+}

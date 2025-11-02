@@ -1,0 +1,85 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
+use Commands\GenerateApiKey;
+
+// === CLI ARGUMENTS ===
+$command = $argv[1] ?? null;
+$arg     = $argv[2] ?? null;
+
+// === HELP MENU ===
+function showHelp()
+{
+    echo "⚡ Daftar Perintah Tersedia:\n";
+    echo "  php console make:migration <nama_tabel>   → Buat file migration baru\n";
+    echo "  php console migrate                       → Jalankan semua migration\n";
+    echo "  php console migrate:generate              → Generate migration dari database\n";
+    echo "  php console migrate:fresh                 → Drop semua tabel lalu migrate ulang\n";
+    echo "  php console rollback                      → Batalkan migration terakhir\n";
+    echo "  php console seed                          → Jalankan database seeder\n";
+    echo "  php console generate:apikey               → Generate API key baru\n";
+    echo "  php console make:model <NamaModel>        → Buat file model baru\n";
+    echo "  php console make:controller <NamaCtrl>    → Buat file controller baru\n";
+    echo "  php console make:middleware <NamaMW>      → Buat file middleware baru\n";
+    echo "  php console help                          → Tampilkan daftar perintah\n";
+    echo "\n";
+}
+
+// === MAIN COMMAND SWITCH ===
+switch ($command) {
+    case 'make:migration':
+        include __DIR__ . '/commands/GenerateMigration.php';
+        break;
+
+    case 'migrate':
+        include __DIR__ . '/commands/MigrateCommand.php';
+        break;
+
+    case 'migrate:generate':
+        include __DIR__ . '/commands/GenerateFromDatabase.php';
+        break;
+
+    case 'migrate:fresh':
+        include __DIR__ . '/commands/FreshCommand.php';
+        break;
+
+    case 'rollback':
+        include __DIR__ . '/commands/RollbackCommand.php';
+        break;
+
+    case 'seed':
+        include __DIR__ . '/commands/SeedCommand.php';
+        break;
+
+    case 'make:model':
+        $name = $arg;
+        include __DIR__ . '/commands/GenerateModel.php';
+        break;
+
+    case 'make:controller':
+        $name = $arg;
+        include __DIR__ . '/commands/GenerateController.php';
+        break;
+
+    case 'make:middleware':
+        $name = $arg;
+        include __DIR__ . '/commands/GenerateMiddleware.php';
+        break;
+
+    case 'generate:apikey':
+        GenerateApiKey::run();
+        break;
+
+    case '-h':
+    case 'help':
+    case null:
+        showHelp();
+        break;
+
+    default:
+        echo "⚠️  Perintah tidak dikenal: '{$command}'\n\n";
+        showHelp();
+        break;
+}

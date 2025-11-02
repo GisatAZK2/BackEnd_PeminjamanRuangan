@@ -1,0 +1,8 @@
+RewriteEngine On
+# Ganti '/test/' ke nama folder kamu di htdocs
+RewriteBase /test/
+
+# Jika file atau folder tidak ada, arahkan semua ke index.php
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
