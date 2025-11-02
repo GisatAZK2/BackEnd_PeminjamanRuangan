@@ -19,6 +19,25 @@ class UserController
         exit;
     }
 
+    /**
+     * 🔹 Ambil data user dari cookie user_info
+     */
+    private function getUserFromCookie()
+    {
+        if (!isset($_COOKIE['user_info'])) {
+            $this->sendResponse("error", "Cookie user_info tidak ditemukan. Silakan login terlebih dahulu.", null, 401);
+        }
+
+        $decoded = urldecode($_COOKIE['user_info']);
+        $user = json_decode($decoded, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE || !isset($user['id_user'])) {
+            $this->sendResponse("error", "Cookie user_info tidak valid.", null, 400);
+        }
+
+        return $user;
+    }
+
     // =====================
     // 🔹 GET ALL USERS
     // =====================
@@ -29,14 +48,12 @@ class UserController
     }
 
     // =====================
-    // 🔹 GET DETAIL USER
+    // 🔹 GET DETAIL USER (ambil dari cookie)
     // =====================
     public function getDetail()
     {
-        $id = $_GET['id_user'] ?? null;
-        if (!$id) {
-            return $this->sendResponse("error", "ID user wajib disertakan.", null, 400);
-        }
+        $userCookie = $this->getUserFromCookie();
+        $id = $userCookie['id_user'];
 
         $user = $this->model->getUserById($id);
         if (!$user) {
@@ -73,17 +90,19 @@ class UserController
     }
 
     // =====================
-    // 🔹 UPDATE USER
+    // 🔹 UPDATE USER (ambil id dari cookie)
     // =====================
     public function update()
     {
+        $userCookie = $this->getUserFromCookie();
+        $id_user = $userCookie['id_user'];
+
         parse_str(file_get_contents('php://input'), $_PUT);
-        $id_user = $_PUT['id_user'] ?? null;
-        if (!$id_user) {
-            return $this->sendResponse("error", "ID user wajib disertakan.", null, 400);
+
+        if (empty($_PUT)) {
+            return $this->sendResponse("error", "Tidak ada data untuk diperbarui.", null, 400);
         }
 
-        unset($_PUT['id_user']);
         if ($this->model->updateUser($id_user, $_PUT)) {
             $this->sendResponse("success", "User berhasil diperbarui.");
         } else {
@@ -92,15 +111,12 @@ class UserController
     }
 
     // =====================
-    // 🔹 DELETE USER
+    // 🔹 DELETE USER (ambil id dari cookie)
     // =====================
     public function delete()
     {
-        parse_str(file_get_contents('php://input'), $_DELETE);
-        $id_user = $_DELETE['id_user'] ?? null;
-        if (!$id_user) {
-            return $this->sendResponse("error", "ID user wajib disertakan.", null, 400);
-        }
+        $userCookie = $this->getUserFromCookie();
+        $id_user = $userCookie['id_user'];
 
         if ($this->model->deleteUser($id_user)) {
             $this->sendResponse("success", "User berhasil dihapus.");
