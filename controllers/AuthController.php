@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../models/UserModel.php';
+require_once __DIR__ . '/../src/jwt/JWT.php';
 
 class AuthController
 {
@@ -10,9 +11,6 @@ class AuthController
         $this->model = new UserModel($pdo);
     }
 
-    // ======================================
-    // 🔹 LOGIN
-    // ======================================
     public function login()
     {
         header('Content-Type: application/json');
@@ -25,7 +23,7 @@ class AuthController
         }
 
         $user = $this->model->findByUsername($username);
-        if (!$user || md5($password) !== $user['password']) {
+        if (!$user || $user['password'] !== md5($password)) {
             return $this->response(401, "Username atau password salah!");
         }
 
@@ -39,62 +37,51 @@ class AuthController
             "nama"     => $user['nama'] ?? ''
         ];
 
-        // Simpan cookie login
+        $token = JWT::encode($user_info, 3600);
         $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+
+        // ✅ Cookie JWT
+        setcookie("token", $token, [
+            'expires' => time() + 3600,
+            'path' => '/',
+            'secure' => $secure,
+            'httponly' => false, // biar bisa diakses JS
+            'samesite' => 'None'
+        ]);
+
+        // ✅ Cookie user_info
         setcookie("user_info", json_encode($user_info), [
             'expires' => time() + 3600,
             'path' => '/',
             'secure' => $secure,
-            'httponly' => true,
-            'samesite' => 'Lax'
+            'httponly' => false,
+            'samesite' => 'None'
         ]);
 
-        return $this->response(200, "Login berhasil!", ["user_info" => $user_info]);
+        return $this->response(200, "Login berhasil!", [
+            "token" => $token,
+            "user_info" => $user_info
+        ]);
     }
 
-    // ======================================
-    // 🔹 LOGOUT
-    // ======================================
     public function logout()
     {
         header('Content-Type: application/json');
-
-        $user_info_cookie = $_COOKIE['user_info'] ?? null;
-        if (!$user_info_cookie) {
-            return $this->response(400, "Tidak ada sesi login yang aktif.");
-        }
-
-        $user_info = json_decode($user_info_cookie, true);
-        if (!isset($user_info['id_user'])) {
-            return $this->response(400, "Data sesi tidak valid.");
-        }
-
-        $id_user = (int)$user_info['id_user'];
-
-        // Update status logout di DB
-        try {
-            $this->model->setLogoutStatus($id_user);
-        } catch (Exception $e) {
-            return $this->response(500, "Gagal logout: " . $e->getMessage());
-        }
-
-        // Hapus cookie
         $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-        setcookie("user_info", "", [
-            'expires' => time() - 3600,
-            'path' => '/',
-            'domain' => '',
-            'secure' => $secure,
-            'httponly' => true,
-            'samesite' => 'Lax'
-        ]);
+
+        foreach (['token', 'user_info'] as $cookie) {
+            setcookie($cookie, "", [
+                'expires' => time() - 3600,
+                'path' => '/',
+                'secure' => $secure,
+                'httponly' => false,
+                'samesite' => 'None'
+            ]);
+        }
 
         return $this->response(200, "Logout berhasil!");
     }
 
-    // ======================================
-    // 🔹 HELPER RESPONSE
-    // ======================================
     private function response($status, $message, $data = [])
     {
         http_response_code($status);

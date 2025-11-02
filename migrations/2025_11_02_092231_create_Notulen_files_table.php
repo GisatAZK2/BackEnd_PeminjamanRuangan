@@ -2,13 +2,11 @@
 return [
     "table" => "Notulen_files",
     "up" => "
-        CREATE TABLE IF NOT EXISTS notulen_files (
+        CREATE TABLE IF NOT EXISTS Notulen_files (
             id INT AUTO_INCREMENT PRIMARY KEY,
             pinjam_id INT NOT NULL,
-            file_name VARCHAR(255) NOT NULL,
-            file_type VARCHAR(100) NOT NULL,
-            file_size INT UNSIGNED NOT NULL,
-            file_data LONGBLOB NOT NULL,
+            files_json JSON NOT NULL, -- metadata JSON (nama, type, size)
+            files_blob LONGBLOB NOT NULL, -- data biner base64 gabungan
             uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (pinjam_id) REFERENCES Pinjam_Ruangan(id) ON DELETE CASCADE
         )

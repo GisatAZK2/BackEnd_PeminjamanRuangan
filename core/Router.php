@@ -3,27 +3,27 @@ class Router
 {
     private static array $routes = [];
 
-    public static function get(string $path, array $handler)
+    public static function get(string $path, array|callable $handler)
     {
         self::addRoute('GET', $path, $handler);
     }
 
-    public static function post(string $path, array $handler)
+    public static function post(string $path, array|callable $handler)
     {
         self::addRoute('POST', $path, $handler);
     }
 
-    public static function put(string $path, array $handler)
+    public static function put(string $path, array|callable $handler)
     {
         self::addRoute('PUT', $path, $handler);
     }
 
-    public static function delete(string $path, array $handler)
+    public static function delete(string $path, array|callable $handler)
     {
         self::addRoute('DELETE', $path, $handler);
     }
 
-    private static function addRoute(string $method, string $path, array $handler)
+    private static function addRoute(string $method, string $path, array|callable $handler)
     {
         self::$routes[] = [
             'method' => strtoupper($method),
@@ -36,7 +36,7 @@ class Router
     {
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $method = $_SERVER['REQUEST_METHOD'];
-        $cleanUri = '/' . trim($uri, '/'); // normalize
+        $cleanUri = '/' . trim($uri, '/'); // normalisasi path
 
         foreach (self::$routes as $route) {
             $routePath = '/' . trim($route['path'], '/');
@@ -45,13 +45,20 @@ class Router
             $pattern = '/^' . $pattern . '$/';
 
             if ($route['method'] === $method && preg_match($pattern, $cleanUri, $matches)) {
-                array_shift($matches); // remove full match
+                array_shift($matches); // hapus full match
+
+                // Jika handler adalah callable closure
+                if (is_callable($route['handler'])) {
+                    return call_user_func($route['handler'], ...$matches);
+                }
+
+                // Jika handler berupa [ControllerClass, method]
                 [$controllerClass, $methodName] = $route['handler'];
                 $controllerFile = __DIR__ . '/../controllers/' . $controllerClass . '.php';
 
                 if (!file_exists($controllerFile)) {
                     http_response_code(500);
-                    echo json_encode(["status" => "error", "message" => "Controller file not found"]);
+                    echo json_encode(["status" => "error", "message" => "Controller file $controllerClass tidak ditemukan"]);
                     return;
                 }
 
@@ -60,11 +67,10 @@ class Router
 
                 if (!method_exists($controller, $methodName)) {
                     http_response_code(500);
-                    echo json_encode(["status" => "error", "message" => "Method $methodName not found"]);
+                    echo json_encode(["status" => "error", "message" => "Method $methodName tidak ditemukan di $controllerClass"]);
                     return;
                 }
 
-                // Panggil method dengan parameter dinamis (misal: id)
                 return $controller->$methodName(...$matches);
             }
         }
