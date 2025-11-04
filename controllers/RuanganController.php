@@ -132,41 +132,41 @@ class RuanganController
     // PEMINJAM: Tandai Rapat Selesai + Upload Notulen
     // ===============================
     public function markFinished($pinjam_id)
-    {
-        $user = $this->getUser();
-        if (!$user || ($user['role'] ?? '') !== 'peminjam')
-            return $this->sendResponse('error', 'Hanya peminjam yang dapat menyelesaikan rapat.', null, 403);
+{
+    $user = $this->getUser();
+    if (!$user || ($user['role'] ?? '') !== 'peminjam')
+        return $this->sendResponse('error', 'Hanya peminjam yang dapat menyelesaikan rapat.', null, 403);
 
-        $booking = $this->model->getBookingById($pinjam_id);
-        if (!$booking)
-            return $this->sendResponse('error', 'Data pinjaman tidak ditemukan.', null, 404);
+    $booking = $this->model->getBookingById($pinjam_id);
+    if (!$booking)
+        return $this->sendResponse('error', 'Data pinjaman tidak ditemukan.', null, 404);
 
-        if (($booking['status'] ?? '') !== 'disetujui')
-            return $this->sendResponse('error', 'Hanya rapat dengan status disetujui yang dapat diselesaikan.', null, 400);
+    if (($booking['status'] ?? '') !== 'disetujui')
+        return $this->sendResponse('error', 'Hanya rapat dengan status disetujui yang dapat diselesaikan.', null, 400);
 
-        // Pastikan ada file; bisa single atau multiple input name 'file' atau 'files[]'
-        if (empty($_FILES)) {
-            return $this->sendResponse('error', 'File notulen wajib diunggah.', null, 400);
-        }
-
-        // Cari parameter file. Jika frontend mengirim dengan name 'file' atau 'files'
-        $fileField = null;
-        if (isset($_FILES['file'])) $fileField = $_FILES['file'];
-        elseif (isset($_FILES['files'])) $fileField = $_FILES['files'];
-        else {
-            // ambil first element di $_FILES
-            $first = reset($_FILES);
-            $fileField = $first;
-        }
-
-        $ok = $this->model->uploadNotulenMulti($pinjam_id, $fileField);
-        if (!$ok) {
-            return $this->sendResponse('error', 'Gagal mengunggah file notulen. Periksa konfigurasi server/permission.', null, 500);
-        }
-
-        $this->model->markAsFinished($pinjam_id);
-        $this->sendResponse('success', 'Rapat selesai & semua file notulen berhasil diunggah.');
+    if (empty($_FILES)) {
+        return $this->sendResponse('error', 'File notulen wajib diunggah.', null, 400);
     }
+
+    // Dukung: <input name="files[]" multiple> atau <input name="file">
+    $fileField = null;
+    if (isset($_FILES['files']) && is_array($_FILES['files']['name'])) {
+        $fileField = $_FILES['files'];
+    } elseif (isset($_FILES['file'])) {
+        $fileField = $_FILES['file'];
+    } else {
+        $fileField = reset($_FILES); // ambil yang pertama
+    }
+
+    $ok = $this->model->uploadNotulenMulti($pinjam_id, $fileField);
+    if (!$ok) {
+        return $this->sendResponse('error', 'Gagal mengunggah file. Pastikan ukuran < 16MB.', null, 500);
+    }
+
+    $this->model->markAsFinished($pinjam_id);
+    $this->sendResponse('success', 'Rapat selesai & semua file notulen berhasil diunggah.');
+}
+
 
     // ===============================
     // GET HISTORY + NOTULEN (FIXED & COMPLETE)
@@ -183,6 +183,8 @@ class RuanganController
         if (!in_array($filter, $allowed)) {
             $filter = 'semua';
         }
+
+        
 
         $data = $this->model->getBookingHistory($user, $filter);
         $this->sendResponse('success', 'Histori peminjaman berhasil diambil.', $data);

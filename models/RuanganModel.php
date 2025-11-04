@@ -93,156 +93,78 @@ class RuanganModel
     // - stores files_json (array meta) and files_blob (array base64)
     // ===============================
     public function uploadNotulenMulti($pinjam_id, $files)
-    {
-        $fileMetas = [];
-        $fileContents = [];
+{
+    $fileMetas = [];
+    $fileContents = [];
 
-        // Normalize single-file to array form
-        if (!is_array($files['name'])) {
-            $names = [$files['name']];
-            $tmp_names = [$files['tmp_name']];
-            $types = [$files['type']];
-            $sizes = [$files['size']];
-            $errors = [$files['error']];
-        } else {
-            $names = $files['name'];
-            $tmp_names = $files['tmp_name'];
-            $types = $files['type'];
-            $sizes = $files['size'];
-            $errors = $files['error'];
-        }
+    // normalisasi array file
+    if (!is_array($files['name'])) {
+        $names = [$files['name']];
+        $tmp_names = [$files['tmp_name']];
+        $types = [$files['type']];
+        $sizes = [$files['size']];
+        $errors = [$files['error']];
+    } else {
+        $names = $files['name'];
+        $tmp_names = $files['tmp_name'];
+        $types = $files['type'];
+        $sizes = $files['size'];
+        $errors = $files['error'];
+    }
 
-        // Detect whether we can use GD or Imagick
-        $hasGD = extension_loaded('gd');
-        $hasImagick = class_exists('Imagick');
+    for ($i = 0; $i < count($names); $i++) {
+        if ($errors[$i] !== UPLOAD_ERR_OK) continue;
 
-        for ($i = 0; $i < count($names); $i++) {
-            $name = $names[$i];
-            $tmp = $tmp_names[$i];
-            $type = $types[$i] ?? mime_content_type($tmp);
-            $size = $sizes[$i] ?? (@filesize($tmp) ?: 0);
-            $error = $errors[$i] ?? UPLOAD_ERR_OK;
+        $tmp = $tmp_names[$i];
+        $name = $names[$i];
+        $type = $types[$i] ?? mime_content_type($tmp);
+        $size = $sizes[$i] ?? filesize($tmp);
 
-            if ($error !== UPLOAD_ERR_OK) continue;
-            if (!is_uploaded_file($tmp) && !file_exists($tmp)) {
-                // allow for test cases where tmp is a path (not uploaded file)
-                // continue; // comment out if you want to allow non-uploaded paths
-            }
+        $meta = [
+            'name' => $name,
+            'type' => $type,
+            'size' => $size
+        ];
+        $fileMetas[] = $meta;
+        $fileContents[] = base64_encode(file_get_contents($tmp));
+    }
 
-            $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-            $content = file_get_contents($tmp);
+    if (empty($fileMetas)) return false;
 
-            $isImage = false;
-            // Determine image better
-            $imageInfo = @getimagesize($tmp);
-            if ($imageInfo !== false) {
-                $isImage = true;
-            }
+    // ✅ Ambil data lama (kalau ada)
+    $stmt = $this->pdo->prepare("SELECT files_json, files_blob FROM Notulen_files WHERE pinjam_id = ?");
+    $stmt->execute([$pinjam_id]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            // Try convert images to webp only when image AND a conversion method available
-            if ($isImage && in_array($extension, ['jpg','jpeg','png','webp','gif','bmp','tiff'])) {
-                $converted = false;
+    if ($existing) {
+        $oldMetas = json_decode($existing['files_json'], true) ?: [];
+        $oldBlobs = json_decode($existing['files_blob'], true) ?: [];
 
-                // Prefer Imagick if available (more robust)
-                if ($hasImagick) {
-                    try {
-                        $im = new Imagick($tmp);
-                        // convert to webp
-                        $im->setImageFormat('webp');
-                        // optionally set quality
-                        $im->setImageCompressionQuality(75);
-                        $content = $im->getImagesBlob();
-                        $type = 'image/webp';
-                        $name = pathinfo($name, PATHINFO_FILENAME) . '.webp';
-                        $size = strlen($content);
-                        $im->clear();
-                        $im->destroy();
-                        $converted = true;
-                    } catch (Exception $e) {
-                        // fallback to GD or keep original
-                        $converted = false;
-                    }
-                }
+        // gabungkan data lama + baru
+        $fileMetas = array_merge($oldMetas, $fileMetas);
+        $fileContents = array_merge($oldBlobs, $fileContents);
 
-                // If not converted by Imagick, try GD (if supports needed codecs)
-                if (!$converted && $hasGD) {
-                    // map extensions to loader functions and check existence
-                    $loader = null;
-                    if (in_array($extension, ['jpg','jpeg']) && function_exists('imagecreatefromjpeg')) {
-                        $loader = 'imagecreatefromjpeg';
-                    } elseif ($extension === 'png' && function_exists('imagecreatefrompng')) {
-                        $loader = 'imagecreatefrompng';
-                    } elseif ($extension === 'webp' && function_exists('imagecreatefromwebp')) {
-                        $loader = 'imagecreatefromwebp';
-                    } elseif ($extension === 'gif' && function_exists('imagecreatefromgif')) {
-                        $loader = 'imagecreatefromgif';
-                    } elseif ($extension === 'bmp' && function_exists('imagecreatefrombmp')) {
-                        $loader = 'imagecreatefrombmp';
-                    } elseif (in_array($extension, ['tif','tiff'])) {
-                        // no guaranteed loader in GD; skip
-                        $loader = null;
-                    }
+        $json = json_encode($fileMetas);
+        $blob = json_encode($fileContents);
 
-                    if ($loader) {
-                        $img = @$loader($tmp);
-                        if ($img !== false && $img !== null) {
-                            // Ensure palette -> truecolor for png/gif
-                            if (function_exists('imagepalettetotruecolor') && imageistruecolor($img) === false) {
-                                @imagepalettetotruecolor($img);
-                            }
-                            // preserve alpha for png
-                            if ($extension === 'png' && function_exists('imagesavealpha')) {
-                                @imagealphablending($img, true);
-                                @imagesavealpha($img, true);
-                            }
-
-                            // output to temporary file (safer than output buffering in some envs)
-                            $tmp_out = tempnam(sys_get_temp_dir(), 'webp_');
-                            if ($tmp_out !== false) {
-                                // imagewebp may not exist if GD built without webp support
-                                if (function_exists('imagewebp')) {
-                                    // quality 75
-                                    @imagewebp($img, $tmp_out, 75);
-                                    $newContent = @file_get_contents($tmp_out);
-                                    if ($newContent !== false && strlen($newContent) > 0) {
-                                        $content = $newContent;
-                                        $type = 'image/webp';
-                                        $name = pathinfo($name, PATHINFO_FILENAME) . '.webp';
-                                        $size = strlen($content);
-                                        $converted = true;
-                                    }
-                                    @unlink($tmp_out);
-                                }
-                            }
-                            @imagedestroy($img);
-                        }
-                    }
-                }
-                // If no conversion succeeded: leave original $content, $type, $name
-            }
-
-            // build meta and content arrays
-            $meta = [
-                'name' => $name,
-                'type' => $type,
-                'size' => $size
-            ];
-            $fileMetas[] = $meta;
-            $fileContents[] = base64_encode($content);
-        }
-
-        if (empty($fileMetas)) return false;
-
+        $stmt = $this->pdo->prepare("
+            UPDATE Notulen_files 
+            SET files_json = ?, files_blob = ?
+            WHERE pinjam_id = ?
+        ");
+        return $stmt->execute([$json, $blob, $pinjam_id]);
+    } else {
+        // belum ada data, buat baru
         $json = json_encode($fileMetas);
         $blob = json_encode($fileContents);
 
         $stmt = $this->pdo->prepare("
             INSERT INTO Notulen_files (pinjam_id, files_json, files_blob)
             VALUES (?, ?, ?)
-            ON DUPLICATE KEY UPDATE files_json = VALUES(files_json), files_blob = VALUES(files_blob)
         ");
         return $stmt->execute([$pinjam_id, $json, $blob]);
     }
+}
 
     public function getNotulenFileByIndex($file_id, $index)
     {
@@ -311,16 +233,17 @@ class RuanganModel
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as &$row) {
+            // Di dalam loop
             if (!empty($row['files_json'])) {
-                $meta = json_decode($row['files_json'], true);
-                $blobs = json_decode($row['files_blob'], true);
+                $meta = json_decode($row['files_json'], true) ?: [];
+                $blobs = json_decode($row['files_blob'], true) ?: [];
                 $files = [];
-                foreach ($meta as $i => $m) {
+                for ($i = 0; $i < count($meta); $i++) {
                     $files[] = [
-                        'name' => $m['name'],
-                        'type' => $m['type'],
-                        'size' => $m['size'],
-                        'preview_url' => 'data:' . $m['type'] . ';base64,' . ($blobs[$i] ?? ''),
+                        'name' => $meta[$i]['name'],
+                        'type' => $meta[$i]['type'],
+                        'size' => $meta[$i]['size'],
+                        'preview_url' => 'data:' . $meta[$i]['type'] . ';base64,' . ($blobs[$i] ?? ''),
                         'download_url' => "/api/downloadNotulen/{$row['notulen_id']}?index={$i}"
                     ];
                 }
