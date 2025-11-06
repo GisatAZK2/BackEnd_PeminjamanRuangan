@@ -14,7 +14,6 @@ class AuthController
     public function login()
     {
         header('Content-Type: application/json');
-
         $username = $_POST['username'] ?? '';
         $password = $_POST['password'] ?? '';
 
@@ -23,7 +22,7 @@ class AuthController
         }
 
         $user = $this->model->findByUsername($username);
-        if (!$user || $user['password'] !== md5($password)) {
+        if (!$user || !password_verify($password, $user['password_hash'])) {
             return $this->response(401, "Username atau password salah!");
         }
 
@@ -40,16 +39,15 @@ class AuthController
         $token = JWT::encode($user_info, 3600);
         $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 
-        // ✅ Cookie JWT
+        // ✅ Simpan cookie token & user info
         setcookie("token", $token, [
             'expires' => time() + 3600,
             'path' => '/',
             'secure' => $secure,
-            'httponly' => false, // biar bisa diakses JS
+            'httponly' => false,
             'samesite' => 'None'
         ]);
 
-        // ✅ Cookie user_info
         setcookie("user_info", json_encode($user_info), [
             'expires' => time() + 3600,
             'path' => '/',

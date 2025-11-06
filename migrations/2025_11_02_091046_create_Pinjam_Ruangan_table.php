@@ -15,7 +15,7 @@ return [
             tanggal_selesai_rapat DATETIME NULL,
             keterangan TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES table_user(id_user) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES User(id_user) ON DELETE CASCADE,
             FOREIGN KEY (ruangan_id) REFERENCES Ruangan(id) ON DELETE CASCADE
         )
     ",

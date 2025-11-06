@@ -8,9 +8,7 @@ class RuanganModel
         $this->pdo = $pdo;
     }
 
-    // ===============================
-    // RUANGAN
-    // ===============================
+    // ... (fungsi ruangan dasar tetap sama)
     public function getAllRooms()
     {
         $stmt = $this->pdo->query("SELECT * FROM Ruangan ORDER BY created_at DESC");
@@ -24,39 +22,14 @@ class RuanganModel
     }
 
     // ===============================
-    // PEMINJAMAN
-    // ===============================
-    public function isRoomAvailable($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
-    {
-        $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) FROM Pinjam_Ruangan 
-            WHERE ruangan_id = ? 
-              AND status IN ('pending','disetujui')
-              AND (
-                (tanggal_mulai <= ? AND tanggal_selesai >= ?) 
-                OR (tanggal_mulai <= ? AND tanggal_selesai >= ?)
-              )
-              AND (
-                (jam_mulai <= ? AND jam_selesai >= ?) 
-                OR (jam_mulai <= ? AND jam_selesai >= ?)
-              )
-        ");
-        $stmt->execute([
-            $ruangan_id,
-            $tanggal_selesai, $tanggal_mulai,
-            $tanggal_selesai, $tanggal_mulai,
-            $jam_selesai, $jam_mulai,
-            $jam_selesai, $jam_mulai
-        ]);
-        return $stmt->fetchColumn() == 0;
-    }
-
+    // createBooking: biasa (INSERT)
+    // tapi kita gunakan method terpisah untuk dipanggil di controller setelah lock check
     public function createBooking($data)
     {
         $stmt = $this->pdo->prepare("
-            INSERT INTO Pinjam_Ruangan 
-                (user_id, ruangan_id, kegiatan, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+            INSERT INTO Pinjam_Ruangan
+                (user_id, ruangan_id, kegiatan, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
         ");
         return $stmt->execute([
             $data['user_id'],
@@ -65,8 +38,89 @@ class RuanganModel
             $data['tanggal_mulai'],
             $data['tanggal_selesai'],
             $data['jam_mulai'],
-            $data['jam_selesai']
+            $data['jam_selesai'],
         ]);
+    }
+
+    // ===============================
+    // Cek availability biasa (non-lock) - tetap tersedia
+    public function isRoomAvailable($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) FROM Pinjam_Ruangan
+            WHERE ruangan_id = ?
+              AND status IN ('pending','disetujui')
+              AND NOT (
+                (tanggal_selesai < ?)
+                OR (tanggal_mulai > ?)
+                OR (jam_selesai <= ?)
+                OR (jam_mulai >= ?)
+              )
+        ");
+        $stmt->execute([
+            $ruangan_id,
+            $tanggal_mulai, // if existing booking ends before requested start date -> no conflict
+            $tanggal_selesai, // if existing booking starts after requested end date -> no conflict
+            $jam_mulai,
+            $jam_selesai
+        ]);
+        return $stmt->fetchColumn() == 0;
+    }
+
+    // ===============================
+    // Cek availability with FOR UPDATE to avoid race condition
+    public function isRoomAvailableForUpdate($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
+    {
+        // Lock rows that could conflict
+        $sql = "
+            SELECT id FROM Pinjam_Ruangan
+            WHERE ruangan_id = ?
+              AND status IN ('pending','disetujui')
+              AND NOT (
+                (tanggal_selesai < ?)
+                OR (tanggal_mulai > ?)
+                OR (jam_selesai <= ?)
+                OR (jam_mulai >= ?)
+              )
+            FOR UPDATE
+        ";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            $ruangan_id,
+            $tanggal_mulai,
+            $tanggal_selesai,
+            $jam_mulai,
+            $jam_selesai
+        ]);
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        return count($rows) === 0;
+    }
+
+    // ===============================
+    // getBookingById (non-lock)
+    public function getBookingById($id)
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT pr.*, u.nama AS nama_user, r.ruangan_name
+            FROM Pinjam_Ruangan pr
+            JOIN User u ON pr.user_id = u.id_user
+            JOIN Ruangan r ON pr.ruangan_id = r.id
+            WHERE pr.id = ?
+        ");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // ambil booking by id with FOR UPDATE
+    public function getBookingByIdForUpdate($id)
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT * FROM Pinjam_Ruangan
+            WHERE id = ?
+            FOR UPDATE
+        ");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function updateStatus($id, $status, $keterangan = null)
@@ -75,146 +129,68 @@ class RuanganModel
         return $stmt->execute([$status, $keterangan, $id]);
     }
 
-    public function getBookingById($id)
-    {
-        $stmt = $this->pdo->prepare("
-            SELECT pr.*, u.nama AS nama_user, r.ruangan_name 
-            FROM Pinjam_Ruangan pr
-            JOIN table_user u ON pr.user_id = u.id_user
-            JOIN Ruangan r ON pr.ruangan_id = r.id
-            WHERE pr.id = ?
-        ");
-        $stmt->execute([$id]);
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
     // ===============================
-    // NOTULEN MULTI-FILE (AUTO WEBP with safe fallbacks)
-    // - stores files_json (array meta) and files_blob (array base64)
-    // ===============================
+    // Notulen upload (sama)
     public function uploadNotulenMulti($pinjam_id, $files)
-{
-    $fileMetas = [];
-    $fileContents = [];
+    {
+        if (!isset($files['name'])) return false;
 
-    // normalisasi array file
-    if (!is_array($files['name'])) {
-        $names = [$files['name']];
-        $tmp_names = [$files['tmp_name']];
-        $types = [$files['type']];
-        $sizes = [$files['size']];
-        $errors = [$files['error']];
-    } else {
-        $names = $files['name'];
-        $tmp_names = $files['tmp_name'];
-        $types = $files['type'];
-        $sizes = $files['size'];
-        $errors = $files['error'];
+        $count = is_array($files['name']) ? count($files['name']) : 1;
+        for ($i = 0; $i < $count; $i++) {
+            $name = is_array($files['name']) ? $files['name'][$i] : $files['name'];
+            $tmp = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
+            $type = is_array($files['type']) ? $files['type'][$i] : $files['type'];
+            $size = is_array($files['size']) ? $files['size'][$i] : $files['size'];
+            $error = is_array($files['error']) ? $files['error'][$i] : $files['error'];
+
+            if ($error !== UPLOAD_ERR_OK) continue;
+
+            $dataBase64 = base64_encode(file_get_contents($tmp));
+            $stmt = $this->pdo->prepare("
+                INSERT INTO Notulen_files (pinjam_id, file_name, file_type, file_size, data_base64, uploaded_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->execute([$pinjam_id, $name, $type, $size, $dataBase64]);
+        }
+        return true;
     }
 
-    for ($i = 0; $i < count($names); $i++) {
-        if ($errors[$i] !== UPLOAD_ERR_OK) continue;
-
-        $tmp = $tmp_names[$i];
-        $name = $names[$i];
-        $type = $types[$i] ?? mime_content_type($tmp);
-        $size = $sizes[$i] ?? filesize($tmp);
-
-        $meta = [
-            'name' => $name,
-            'type' => $type,
-            'size' => $size
-        ];
-        $fileMetas[] = $meta;
-        $fileContents[] = base64_encode(file_get_contents($tmp));
+    public function getNotulenFilesByPinjam($pinjam_id)
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM Notulen_files WHERE pinjam_id = ?");
+        $stmt->execute([$pinjam_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    if (empty($fileMetas)) return false;
-
-    // ✅ Ambil data lama (kalau ada)
-    $stmt = $this->pdo->prepare("SELECT files_json, files_blob FROM Notulen_files WHERE pinjam_id = ?");
-    $stmt->execute([$pinjam_id]);
-    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    if ($existing) {
-        $oldMetas = json_decode($existing['files_json'], true) ?: [];
-        $oldBlobs = json_decode($existing['files_blob'], true) ?: [];
-
-        // gabungkan data lama + baru
-        $fileMetas = array_merge($oldMetas, $fileMetas);
-        $fileContents = array_merge($oldBlobs, $fileContents);
-
-        $json = json_encode($fileMetas);
-        $blob = json_encode($fileContents);
-
-        $stmt = $this->pdo->prepare("
-            UPDATE Notulen_files 
-            SET files_json = ?, files_blob = ?
-            WHERE pinjam_id = ?
-        ");
-        return $stmt->execute([$json, $blob, $pinjam_id]);
-    } else {
-        // belum ada data, buat baru
-        $json = json_encode($fileMetas);
-        $blob = json_encode($fileContents);
-
-        $stmt = $this->pdo->prepare("
-            INSERT INTO Notulen_files (pinjam_id, files_json, files_blob)
-            VALUES (?, ?, ?)
-        ");
-        return $stmt->execute([$pinjam_id, $json, $blob]);
-    }
-}
-
-    public function getNotulenFileByIndex($file_id, $index)
+    public function getNotulenFileById($file_id)
     {
         $stmt = $this->pdo->prepare("SELECT * FROM Notulen_files WHERE id = ?");
         $stmt->execute([$file_id]);
-        $data = $stmt->fetch(PDO::FETCH_ASSOC);
-        if (!$data) return null;
-
-        $meta = json_decode($data['files_json'], true);
-        $blobArray = json_decode($data['files_blob'], true);
-        if (!isset($meta[$index]) || !isset($blobArray[$index])) return null;
-
-        return [
-            'pinjam_id' => $data['pinjam_id'],
-            'meta' => $meta[$index],
-            'data' => base64_decode($blobArray[$index])
-        ];
+        return $stmt->fetch(PDO::FETCH_ASSOC);
     }
 
     public function markAsFinished($pinjam_id)
     {
         $stmt = $this->pdo->prepare("
-            UPDATE Pinjam_Ruangan 
-            SET status = 'selesai', keterangan = 'Rapat selesai dan notulen telah diunggah.'
+            UPDATE Pinjam_Ruangan
+            SET status = 'selesai', keterangan = 'Rapat selesai dan notulen telah diunggah.', tanggal_selesai_rapat = NOW()
             WHERE id = ?
         ");
         return $stmt->execute([$pinjam_id]);
     }
 
     // ===============================
-    // HISTORI (multi-file)
-    // ===============================
+    // getBookingHistory (kembalikan notulen juga)
     public function getBookingHistory($user, $filter = 'semua')
     {
         $sql = "
-            SELECT 
-                pr.*, 
-                u.nama AS nama_user, 
-                r.ruangan_name,
-                nf.id AS notulen_id,
-                nf.files_json,
-                nf.files_blob
+            SELECT pr.*, u.nama AS nama_user, r.ruangan_name
             FROM Pinjam_Ruangan pr
-            JOIN table_user u ON pr.user_id = u.id_user
+            JOIN User u ON pr.user_id = u.id_user
             JOIN Ruangan r ON pr.ruangan_id = r.id
-            LEFT JOIN Notulen_files nf ON nf.pinjam_id = pr.id
         ";
-
         $params = [];
-        if ($user['role'] === 'peminjam') {
+        if (($user['role'] ?? '') === 'peminjam') {
             $sql .= " WHERE pr.user_id = ?";
             $params[] = $user['id_user'];
         } else {
@@ -225,46 +201,55 @@ class RuanganModel
             $sql .= " AND pr.status = ?";
             $params[] = $filter;
         }
-
         $sql .= " ORDER BY pr.created_at DESC";
-
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         foreach ($rows as &$row) {
-            // Di dalam loop
-            if (!empty($row['files_json'])) {
-                $meta = json_decode($row['files_json'], true) ?: [];
-                $blobs = json_decode($row['files_blob'], true) ?: [];
-                $files = [];
-                for ($i = 0; $i < count($meta); $i++) {
-                    $files[] = [
-                        'name' => $meta[$i]['name'],
-                        'type' => $meta[$i]['type'],
-                        'size' => $meta[$i]['size'],
-                        'preview_url' => 'data:' . $meta[$i]['type'] . ';base64,' . ($blobs[$i] ?? ''),
-                        'download_url' => "/api/downloadNotulen/{$row['notulen_id']}?index={$i}"
+            $stmt2 = $this->pdo->prepare("SELECT * FROM Notulen_files WHERE pinjam_id = ?");
+            $stmt2->execute([$row['id']]);
+            $files = $stmt2->fetchAll(PDO::FETCH_ASSOC);
+            if ($files) {
+                $row['notulen'] = array_map(function($f){
+                    return [
+                        'id'=>$f['id'],
+                        'name'=>$f['file_name'],
+                        'type'=>$f['file_type'],
+                        'size'=>$f['file_size'],
+                        'preview_url'=>'data:'.$f['file_type'].';base64,'.$f['data_base64'],
+                        'download_url'=>"/api/downloadNotulen/{$f['id']}"
                     ];
-                }
-                $row['notulen'] = $files;
+                }, $files);
             } else {
-                $row['notulen'] = null;
+                $row['notulen'] = [];
             }
-            unset($row['files_json'], $row['files_blob']);
         }
-
         return $rows;
     }
 
     // ===============================
-    // AUTO-SELESAI
+    // get approved bookings for a room (useful for calendar)
+    public function getApprovedBookingsByRoom($ruangan_id)
+    {
+        $stmt = $this->pdo->prepare("
+            SELECT id, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, user_id
+            FROM Pinjam_Ruangan
+            WHERE ruangan_id = ?
+              AND status = 'disetujui'
+            ORDER BY tanggal_mulai ASC, jam_mulai ASC
+        ");
+        $stmt->execute([$ruangan_id]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
     // ===============================
+    // getExpiredBookings (sama)
     public function getExpiredBookings()
     {
         $stmt = $this->pdo->query("
-            SELECT * FROM Pinjam_Ruangan 
-            WHERE status = 'disetujui' 
+            SELECT * FROM Pinjam_Ruangan
+            WHERE status = 'disetujui'
               AND tanggal_selesai < (NOW() - INTERVAL 1 DAY)
         ");
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

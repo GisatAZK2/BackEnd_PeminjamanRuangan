@@ -51,21 +51,31 @@ Router::post('/api/logout', [AuthController::class, 'logout']);
 // ========================================================
 // 👤 User Management (protected)
 // ========================================================
-Router::get('/api/users', $protected([UserController::class, 'getAll']));
-Router::get('/api/users/detail', $protected([UserController::class, 'getDetail']));
-Router::post('/api/users/add', $protected([UserController::class, 'add']));
-Router::put('/api/users/update', $protected([UserController::class, 'update']));
-Router::delete('/api/users/delete', $protected([UserController::class, 'delete']));
+// USER ENDPOINTS
+Router::get('/api/users', [UserController::class, 'getAll']);
+Router::get('/api/users/detail', [UserController::class, 'getDetail']);
+Router::post('/api/users/add', [UserController::class, 'add']);
+Router::put('/api/users/update', [UserController::class, 'update']);
+Router::delete('/api/users/delete', [UserController::class, 'delete']);
+Router::post('/api/users/request-edit', [UserController::class, 'requestEdit']);
+Router::post('/api/users/change-role', [UserController::class, 'changeRole']);
 
+// DIVISI ENDPOINTS (admin only)
+Router::get('/api/divisi', [DivisiController::class, 'getAll']);
+Router::post('/api/divisi', [DivisiController::class, 'add']);
+Router::put('/api/divisi/{id}', [DivisiController::class, 'update']);
+Router::delete('/api/divisi/{id}', [DivisiController::class, 'delete']);
 // ========================================================
 // 🏢 Room Management (protected)
 // ========================================================
-Router::post('/api/AddRoom', $protected([RuanganController::class, 'addRoom']));
-Router::post('/api/BookingRoom', $protected([RuanganController::class, 'createBooking']));
-Router::post('/api/UpdateStatusBooking/{id}', $protected([RuanganController::class, 'updateStatus']));
-Router::post('/api/RoomFinished/{id}',([RuanganController::class, 'markFinished']));
-Router::get('/api/GetHistory', $protected([RuanganController::class, 'getBookingHistory']));
-Router::post('/api/AutoFinishRoom', $protected([RuanganController::class, 'autoMarkFinished']));
+Router::post('/api/AddRoom',$protected([RuanganController::class, 'addRoom']));
+Router::post('/api/BookingRoom',$protected([RuanganController::class, 'createBooking']));
+Router::post('/api/UpdateStatusBooking/{id}',$protected([RuanganController::class, 'updateStatus']));
+Router::post('/api/RoomFinished/{id}',$protected([RuanganController::class, 'markFinished']));
+Router::get('/api/downloadNotulen/{id}', $protected([RuanganController::class, 'downloadNotulen']));
+Router::get('/api/roomAvailability', ([RuanganController::class, 'getRoomAvailability']));
+Router::get('/api/GetHistory',$protected([RuanganController::class, 'getBookingHistory']));
+Router::post('/api/AutoFinishRoom',$protected([RuanganController::class, 'autoMarkFinished']));
 
 // ========================================================
 // 🚀 Jalankan router
