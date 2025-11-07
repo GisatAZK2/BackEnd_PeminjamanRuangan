@@ -56,7 +56,7 @@ class RuanganController
             if ($success) {
                 return $this->sendResponse('success', 'Ruangan berhasil ditambahkan.', [
                     'ruangan_name' => $ruangan_name,
-                    'created_by' => $user['username'] ?? 'admin'
+                    'created_by' => $user['username'] ?? 'administrator'
                 ]);
             } else {
                 return $this->sendResponse('error', 'Gagal menambahkan ruangan.', null, 500);
