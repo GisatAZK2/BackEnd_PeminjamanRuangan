@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../models/RuanganModel.php';
+require_once __DIR__ . '/../middleware/AuthMiddleware.php';
 
 class RuanganController
 {
@@ -31,6 +32,38 @@ class RuanganController
         header('Content-Type: application/json; charset=utf-8');
         echo json_encode(['status'=>$status, 'message'=>$message, 'data'=>$data], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
         exit;
+    }
+
+     // 🟦 Tambahkan ruangan — hanya admin yang boleh
+    public function addRoom()
+    {
+        // Cek role user dulu
+        $user = AuthMiddleware::requireRole(['admin']);
+
+        // Ambil input JSON
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!isset($input['ruangan_name']) || empty(trim($input['ruangan_name']))) {
+            return $this->sendResponse('error', 'Nama ruangan wajib diisi.', null, 400);
+        }
+
+        $ruangan_name = trim($input['ruangan_name']);
+
+        try {
+            // Simpan ke database
+            $stmt = $this->pdo->prepare("INSERT INTO {$this->tableRuangan} (ruangan_name) VALUES (?)");
+            $success = $stmt->execute([$ruangan_name]);
+
+            if ($success) {
+                return $this->sendResponse('success', 'Ruangan berhasil ditambahkan.', [
+                    'ruangan_name' => $ruangan_name,
+                    'created_by' => $user['username'] ?? 'admin'
+                ]);
+            } else {
+                return $this->sendResponse('error', 'Gagal menambahkan ruangan.', null, 500);
+            }
+        } catch (PDOException $e) {
+            return $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+        }
     }
 
     // create booking with DB transaction + row lock to avoid race conditions
