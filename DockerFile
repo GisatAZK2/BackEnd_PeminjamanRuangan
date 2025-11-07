@@ -1,27 +1,28 @@
-# Gunakan image PHP dengan Apache
+# Gunakan image PHP 8.2 dengan Apache
 FROM php:8.2-apache
 
-# Set working directory di dalam container
+# Set working directory
 WORKDIR /var/www/html
 
-# Install dependensi sistem dan ekstensi PHP
+# Install dependency system dan ekstensi PHP yang dibutuhkan
 RUN apt-get update && apt-get install -y \
     libpng-dev libjpeg-dev libfreetype6-dev zip unzip git curl libicu-dev libonig-dev \
-    && docker-php-ext-install pdo pdo_mysql mysqli intl gd \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install gd intl pdo pdo_mysql mysqli \
     && docker-php-ext-enable pdo_mysql mysqli \
     && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Composer (ambil dari image resmi)
+# Install Composer dari image resmi
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy semua source code dari root project ke container
+# Copy semua file project ke container
 COPY . /var/www/html
 
-# Jalankan composer install di dalam container
-RUN composer install --no-interaction --no-progress --prefer-dist || true
+# Jalankan composer install jika ada composer.json
+RUN if [ -f composer.json ]; then composer install --no-interaction --no-progress --prefer-dist; fi
 
-# Set izin folder agar Apache bisa akses
+# Set permission agar Apache bisa akses
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
