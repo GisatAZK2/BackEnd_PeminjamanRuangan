@@ -1,5 +1,5 @@
-# Gunakan image PHP 8.2 dengan Apache
-FROM php:8.2-apache
+# Gunakan base image PHP 8.2 (CLI, bukan Apache)
+FROM php:8.2-cli
 
 # Set working directory
 WORKDIR /var/www/html
@@ -10,24 +10,24 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install gd intl pdo pdo_mysql mysqli \
     && docker-php-ext-enable pdo_mysql mysqli \
-    && a2enmod rewrite \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Composer dari image resmi
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy semua file project ke container
+# Copy seluruh file project ke container
 COPY . /var/www/html
 
 # Jalankan composer install jika ada composer.json
 RUN if [ -f composer.json ]; then composer install --no-interaction --no-progress --prefer-dist; fi
 
-# Set permission agar Apache bisa akses
+# Set permission agar PHP bisa akses file
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
 # Expose port 8080
 EXPOSE 8080
 
-# Jalankan Apache
-CMD ["apache2-foreground"]
+# Jalankan PHP built-in server (tanpa Apache)
+# Jika file index.php ada di root, biarkan default-nya seperti ini.
+CMD ["php", "-S", "0.0.0.0:8080", "-t", "/var/www/html"]
