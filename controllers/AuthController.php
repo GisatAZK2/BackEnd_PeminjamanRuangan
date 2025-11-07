@@ -36,18 +36,9 @@ class AuthController
             "nama"     => $user['nama'] ?? ''
         ];
 
-        $token = JWT::encode($user_info, 3600);
         $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 
-        // ✅ Simpan cookie token & user info
-        setcookie("token", $token, [
-            'expires' => time() + 3600,
-            'path' => '/',
-            'secure' => $secure,
-            'httponly' => false,
-            'samesite' => 'None'
-        ]);
-
+      
         setcookie("user_info", json_encode($user_info), [
             'expires' => time() + 3600,
             'path' => '/',
@@ -57,7 +48,6 @@ class AuthController
         ]);
 
         return $this->response(200, "Login berhasil!", [
-            "token" => $token,
             "user_info" => $user_info
         ]);
     }
@@ -67,7 +57,7 @@ class AuthController
         header('Content-Type: application/json');
         $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
 
-        foreach (['token', 'user_info'] as $cookie) {
+        foreach (['user_info'] as $cookie) {
             setcookie($cookie, "", [
                 'expires' => time() - 3600,
                 'path' => '/',
