@@ -68,7 +68,7 @@ Router::delete('/api/divisi/{id}', [DivisiController::class, 'delete']);
 // ========================================================
 // 🏢 Room Management (protected)
 // ========================================================
-Router::post('/api/AddRoom',$protected([RuanganController::class, 'addRoom']));
+Router::post('/api/AddRoom', ([RuanganController::class, 'addRoom']));
 Router::post('/api/BookingRoom',$protected([RuanganController::class, 'createBooking']));
 Router::post('/api/UpdateStatusBooking/{id}',$protected([RuanganController::class, 'updateStatus']));
 Router::post('/api/RoomFinished/{id}',$protected([RuanganController::class, 'markFinished']));
