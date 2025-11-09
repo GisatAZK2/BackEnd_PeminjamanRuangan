@@ -6,11 +6,14 @@ class UserController
 {
     private $model;
 
-    public function __construct(PDO $pdo)
+    public function __construct(PDO $pdo, Psr\SimpleCache\CacheInterface $cache)
     {
-        $this->model = new UserModel($pdo);
+        $this->model = new UserModel($pdo, $cache);
     }
 
+    /**
+     * 🔹 Helper untuk kirim respons JSON
+     */
     private function sendResponse($status, $message, $data = null, $httpCode = 200)
     {
         http_response_code($httpCode);
@@ -28,46 +31,54 @@ class UserController
         if (!isset($_COOKIE['user_info'])) {
             $this->sendResponse("error", "Cookie user_info tidak ditemukan. Silakan login terlebih dahulu.", null, 401);
         }
+
         $decoded = urldecode($_COOKIE['user_info']);
         $user = json_decode($decoded, true);
+
         if (json_last_error() !== JSON_ERROR_NONE || !isset($user['id_user'])) {
             $this->sendResponse("error", "Cookie user_info tidak valid.", null, 400);
         }
 
-        // Verifikasi dengan database
+        // 🔍 Verifikasi dengan database
         $dbUser = $this->model->getUserById($user['id_user']);
-        if (!$dbUser || $dbUser['username'] !== $user['username'] || !$dbUser['is_logged_in']) {
+        if (
+            !$dbUser ||
+            $dbUser['username'] !== $user['username'] ||
+            !$dbUser['is_logged_in']
+        ) {
             $this->sendResponse("error", "Sesi tidak valid atau telah logout. Silakan login kembali.", null, 401);
         }
 
-        return $dbUser; // Kembalikan data dari DB untuk keakuratan
+        return $dbUser; // ✅ Data dari database (lebih akurat)
     }
 
-    // =====================
+    // ===============================
     // 🔹 GET ALL USERS
-    // =====================
+    // ===============================
     public function getAll()
     {
         $user = AuthMiddleware::requireRole(['administrator', 'petugas'], $this->model);
 
         if ($user['role'] === 'administrator') {
             $users = $this->model->getAllUsers();
+            // Admin tidak bisa lihat dirinya sendiri di daftar
             $users = array_filter($users, fn($u) => $u['id_user'] !== $user['id_user']);
         } else {
             $users = $this->model->getAllUsers('peminjam');
         }
+
         $this->sendResponse("success", "Daftar user berhasil diambil.", array_values($users));
     }
 
-    // =====================
-    // 🔹 GET DETAIL USER (bisa ambil dari cookie atau query param id_user)
-    // =====================
+    // ===============================
+    // 🔹 GET DETAIL USER
+    // ===============================
     public function getDetail()
     {
         $user = $this->getUserFromCookie();
         $id = isset($_GET['id_user']) ? (int)$_GET['id_user'] : $user['id_user'];
 
-        // Validasi akses
+        // 🔐 Validasi akses
         if ($id !== $user['id_user']) {
             if ($user['role'] === 'administrator') {
                 // Admin bisa lihat semua
@@ -85,12 +96,13 @@ class UserController
         if (!$targetUser) {
             return $this->sendResponse("error", "User tidak ditemukan.", null, 404);
         }
+
         $this->sendResponse("success", "Data user ditemukan.", $targetUser);
     }
 
-    // =====================
+    // ===============================
     // 🔹 ADD USER
-    // =====================
+    // ===============================
     public function add()
     {
         $user = AuthMiddleware::requireRole(['administrator', 'petugas'], $this->model);
@@ -107,14 +119,15 @@ class UserController
             }
         }
 
-        // Petugas cuma bisa tambah peminjam
+        // Petugas hanya boleh tambah peminjam
         if ($user['role'] === 'petugas' && $input['role'] !== 'peminjam') {
             return $this->sendResponse("error", "Petugas hanya dapat menambahkan user dengan role 'peminjam'.", null, 403);
         }
 
         // 🔐 Hash password
         $input['password_hash'] = password_hash($input['password'], PASSWORD_DEFAULT);
-        $input['password_plain'] = $input['password']; // Simpan versi asli untuk admin
+        $input['password_plain'] = $input['password'];
+        unset($input['password']);
 
         if ($this->model->insertUser($input)) {
             $this->sendResponse("success", "User berhasil ditambahkan.", null, 201);
@@ -123,9 +136,9 @@ class UserController
         }
     }
 
-    // =====================
-    // 🔹 REQUEST EDIT (untuk petugas ajukan edit peminjam ke admin)
-    // =====================
+    // ===============================
+    // 🔹 REQUEST EDIT (petugas → admin)
+    // ===============================
     public function requestEdit()
     {
         $user = AuthMiddleware::requireRole(['petugas'], $this->model);
@@ -136,32 +149,27 @@ class UserController
             return $this->sendResponse("error", "ID user target wajib diisi.", null, 400);
         }
 
-        // Cek apakah target role-nya peminjam
         $target = $this->model->getUserById($targetUser);
         if (!$target || $target['role'] !== 'peminjam') {
             return $this->sendResponse("error", "Petugas hanya bisa ajukan edit user peminjam.", null, 403);
         }
 
-        // Kirim email ke admin
         require_once __DIR__ . '/../utils/Mailer.php';
         Mailer::sendAdminNotification(
             "Pengajuan Edit User",
             "<p style='font-size: 16px;'>Halo Admin,</p>
             <p>Petugas <strong>{$user['nama']}</strong> mengajukan pengeditan data untuk user <strong>{$target['nama']}</strong> (ID: {$target['id_user']}).</p>
             <p>Silakan tinjau pengajuan ini di sistem.</p>
-            <br>
-            <p>Terima kasih,</p>
-            <p>Sistem Manajemen User</p>"
+            <br><p>Terima kasih,</p><p>Sistem Manajemen User</p>"
         );
 
-        // Mark pending edit
         $this->model->markPendingEdit($targetUser);
         $this->sendResponse("success", "Pengajuan edit telah dikirim ke administrator.");
     }
 
-    // =====================
-    // 🔹 CHANGE ROLE (hanya admin)
-    // =====================
+    // ===============================
+    // 🔹 CHANGE ROLE (admin only)
+    // ===============================
     public function changeRole()
     {
         $user = AuthMiddleware::requireRole(['administrator'], $this->model);
@@ -186,9 +194,9 @@ class UserController
         }
     }
 
-    // =====================
-    // 🔹 UPDATE USER (support update user lain berdasarkan role)
-    // =====================
+    // ===============================
+    // 🔹 UPDATE USER
+    // ===============================
     public function update()
     {
         $currentUser = $this->getUserFromCookie();
@@ -198,14 +206,14 @@ class UserController
             return $this->sendResponse("error", "Format JSON tidak valid.", null, 400);
         }
 
-        $id_user = $input['id_user'] ?? $currentUser['id_user']; // Jika tidak ada id_user, update diri sendiri
-        unset($input['id_user']); // Hapus id_user dari data update
+        $id_user = $input['id_user'] ?? $currentUser['id_user'];
+        unset($input['id_user']);
 
         if (empty($input)) {
             return $this->sendResponse("error", "Tidak ada data untuk diperbarui.", null, 400);
         }
 
-        // Validasi akses
+        // 🔒 Validasi akses
         if ($id_user !== $currentUser['id_user']) {
             $target = $this->model->getUserById($id_user);
             if (!$target) {
@@ -224,14 +232,14 @@ class UserController
             }
         }
 
-        // Handle password update jika ada
+        // 🔐 Password update
         if (isset($input['password'])) {
             $input['password_hash'] = password_hash($input['password'], PASSWORD_DEFAULT);
             $input['password_plain'] = $input['password'];
-            unset($input['password']); // Hapus password asli dari input
+            unset($input['password']);
         }
 
-        // Role hanya bisa diubah oleh admin melalui endpoint changeRole
+        // Role hanya bisa diubah lewat /change-role
         if (isset($input['role'])) {
             return $this->sendResponse("error", "Gunakan endpoint /change-role untuk mengubah role.", null, 403);
         }
@@ -243,16 +251,15 @@ class UserController
         }
     }
 
-    // =====================
+    // ===============================
     // 🔹 DELETE USER
-    // =====================
+    // ===============================
     public function delete()
     {
         $currentUser = $this->getUserFromCookie();
         $input = json_decode(file_get_contents('php://input'), true);
         $id_user = $input['id_user'] ?? $currentUser['id_user'];
 
-        // Validasi akses
         if ($id_user !== $currentUser['id_user']) {
             if ($currentUser['role'] !== 'administrator') {
                 return $this->sendResponse("error", "Hanya administrator yang bisa hapus user lain.", null, 403);

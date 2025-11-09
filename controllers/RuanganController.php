@@ -6,11 +6,13 @@ class RuanganController
 {
     private $model;
     private $pdo;
+    private $cache;
 
-    public function __construct(PDO $pdo)
+    public function __construct(PDO $pdo, $cache)
     {
         $this->pdo = $pdo;
-        $this->model = new RuanganModel($pdo);
+        $this->cache = $cache;
+        $this->model = new RuanganModel($pdo, $cache);
     }
 
     private function getUser()
@@ -30,45 +32,38 @@ class RuanganController
     {
         http_response_code($code);
         header('Content-Type: application/json; charset=utf-8');
-        echo json_encode(['status'=>$status, 'message'=>$message, 'data'=>$data], JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+        echo json_encode(['status' => $status, 'message' => $message, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
 
-     // 🟦 Tambahkan ruangan — hanya admin yang boleh
-    public function addRoom() {
-    $user = AuthMiddleware::requireRole(['administrator']);
-    $input = json_decode(file_get_contents('php://input'), true);
-
-    if (!isset($input['ruangan_name']) || empty(trim($input['ruangan_name']))) {
-        return $this->sendResponse('error', 'Nama ruangan wajib diisi.', null, 400);
-    }
-
-    $ruangan_name = trim($input['ruangan_name']);
-
-    try {
-        // ✅ Panggil model, jangan query langsung
-        $success = $this->model->addRoom($ruangan_name);
-
-        if ($success) {
-            return $this->sendResponse('success', 'Ruangan berhasil ditambahkan.', [
-                'ruangan_name' => $ruangan_name
-            ]);
-        } else {
-            return $this->sendResponse('error', 'Gagal menambahkan ruangan.', null, 500);
+    // 🟦 Tambahkan ruangan
+    public function addRoom()
+    {
+        $user = AuthMiddleware::requireRole(['administrator']);
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!isset($input['ruangan_name']) || empty(trim($input['ruangan_name']))) {
+            return $this->sendResponse('error', 'Nama ruangan wajib diisi.', null, 400);
         }
-    } catch (PDOException $e) {
-        return $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+        $ruangan_name = trim($input['ruangan_name']);
+        try {
+            $success = $this->model->addRoom($ruangan_name);
+            if ($success) {
+                return $this->sendResponse('success', 'Ruangan berhasil ditambahkan.', ['ruangan_name' => $ruangan_name]);
+            } else {
+                return $this->sendResponse('error', 'Gagal menambahkan ruangan.', null, 500);
+            }
+        } catch (PDOException $e) {
+            return $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+        }
     }
-}
 
-    // create booking with DB transaction + row lock to avoid race conditions
+    // create booking with transaction + lock
     public function createBooking()
     {
         $user = $this->getUser();
         if (!$user || ($user['role'] ?? '') !== 'peminjam') {
             return $this->sendResponse('error', 'Hanya peminjam yang bisa mengajukan.', null, 403);
         }
-
         $data = json_decode(file_get_contents('php://input'), true);
         if (!$data) return $this->sendResponse('error', 'Data pengajuan tidak ditemukan.', null, 400);
 
@@ -78,10 +73,7 @@ class RuanganController
         $data['user_id'] = $user['id_user'];
 
         try {
-            // mulai transaction
             $this->pdo->beginTransaction();
-
-            // cek ketersediaan secara eksklusif (SELECT ... FOR UPDATE)
             $available = $this->model->isRoomAvailableForUpdate(
                 $data['ruangan_id'],
                 $data['tanggal_mulai'],
@@ -89,19 +81,15 @@ class RuanganController
                 $data['jam_mulai'],
                 $data['jam_selesai']
             );
-
             if (!$available) {
                 $this->pdo->rollBack();
                 return $this->sendResponse('error','Ruangan tidak tersedia di jadwal tersebut (konflik).', null, 409);
             }
-
-            // simpan booking
             $ok = $this->model->createBooking($data);
             if (!$ok) {
                 $this->pdo->rollBack();
                 return $this->sendResponse('error','Gagal simpan booking.', null, 500);
             }
-
             $this->pdo->commit();
             return $this->sendResponse('success','Pengajuan ruangan berhasil dibuat. Menunggu persetujuan petugas.');
         } catch (\Exception $e) {
@@ -111,38 +99,29 @@ class RuanganController
         }
     }
 
-    // update status with transaction and optional checks
     public function updateStatus($id)
     {
         $user = $this->getUser();
         if (!$user || ($user['role'] ?? '') !== 'petugas') {
             return $this->sendResponse('error','Hanya petugas yang bisa menyetujui atau menolak.', null, 403);
         }
-
         $data = json_decode(file_get_contents('php://input'), true);
         $status = $data['status'] ?? '';
         $keterangan = $data['keterangan'] ?? null;
-
         if (!in_array($status, ['disetujui','ditolak'])) {
             return $this->sendResponse('error','Status tidak valid.', null, 400);
         }
-
         try {
             $this->pdo->beginTransaction();
-
-            // ambil booking dan lock row
             $booking = $this->model->getBookingByIdForUpdate($id);
             if (!$booking) {
                 $this->pdo->rollBack();
                 return $this->sendResponse('error','Booking tidak ditemukan.', null, 404);
             }
-
-            // jika sudah disetujui/ditolak oleh orang lain, tolak update (prevent race)
             if (in_array($booking['status'], ['disetujui','ditolak'])) {
                 $this->pdo->rollBack();
                 return $this->sendResponse('error',"Booking sudah berstatus {$booking['status']}.", null, 409);
             }
-
             $this->model->updateStatus($id, $status, $keterangan);
             $this->pdo->commit();
             return $this->sendResponse('success',"Pengajuan telah diperbarui menjadi {$status}.");
@@ -153,7 +132,6 @@ class RuanganController
         }
     }
 
-    // mark finished + upload notulen (sudah ada, sedikit penyesuaian)
     public function markFinished($pinjam_id)
     {
         $user = $this->getUser();
@@ -163,7 +141,6 @@ class RuanganController
         $booking = $this->model->getBookingById($pinjam_id);
         if (!$booking) return $this->sendResponse('error','Data pinjaman tidak ditemukan.', null, 404);
         if (($booking['status'] ?? '') !== 'disetujui') return $this->sendResponse('error','Hanya rapat dengan status disetujui yang dapat diselesaikan.', null, 400);
-
         if (empty($_FILES)) return $this->sendResponse('error','File notulen wajib diunggah.', null, 400);
 
         $fileField = null;
@@ -178,12 +155,10 @@ class RuanganController
         $this->sendResponse('success','Rapat selesai & semua file notulen berhasil diunggah.');
     }
 
-    // get booking history (sama seperti sebelumnya)
     public function getBookingHistory()
     {
         $user = $this->getUser();
         if (!$user) return $this->sendResponse('error','Unauthorized', null, 401);
-
         $filter = $_GET['filter'] ?? 'semua';
         $allowed = ['semua','pending','disetujui','ditolak','selesai'];
         if (!in_array($filter,$allowed)) $filter = 'semua';
@@ -192,30 +167,19 @@ class RuanganController
         $this->sendResponse('success','Histori peminjaman berhasil diambil.', $data);
     }
 
-    // DOWNLOAD NOTULEN: kembaliin JSON { base64, type, name } agar FE bisa render
     public function downloadNotulen($file_id)
     {
         $user = $this->getUser();
-        if (!$user) {
-            return $this->sendResponse('error','Unauthorized', null, 401);
-        }
+        if (!$user) return $this->sendResponse('error','Unauthorized', null, 401);
 
-        $index = isset($_GET['index']) ? intval($_GET['index']) : null;
-
-        // if file_id is actually pinjam_id + index (old behavior), we support both:
-        // but model.getNotulenFileById expects file id. We'll assume client sends file id (as implemented in model).
         $file = $this->model->getNotulenFileById($file_id);
-        if (!$file) {
-            return $this->sendResponse('error','File tidak ditemukan.', null, 404);
-        }
+        if (!$file) return $this->sendResponse('error','File tidak ditemukan.', null, 404);
 
-        // akses check: peminjam hanya boleh akses miliknya
         $booking = $this->model->getBookingById($file['pinjam_id']);
         if (($user['role'] ?? '') === 'peminjam' && $booking['user_id'] != $user['id_user']) {
             return $this->sendResponse('error','Akses ditolak.', null, 403);
         }
 
-        // kirim JSON
         $payload = [
             'id' => $file['id'],
             'name' => $file['file_name'],
@@ -226,23 +190,15 @@ class RuanganController
         return $this->sendResponse('success','File ditemukan.', $payload);
     }
 
-    // NEW: endpoint yang menampilkan rentang waktu ruangan yg disetujui (berguna untuk calendar/cek availability)
     public function getRoomAvailability()
     {
-        $user = $this->getUser();
-        if (!$user) {
-            // endpoint ini boleh publik juga, tapi kita cek API key di middleware, jadi izinkan user tanpa login.
-            // untuk konsistensi kita retur data tanpa perlu login
-        }
         $ruangan_id = isset($_GET['ruangan_id']) ? intval($_GET['ruangan_id']) : 0;
         if (!$ruangan_id) return $this->sendResponse('error','ruangan_id wajib.', null, 400);
 
         $data = $this->model->getApprovedBookingsByRoom($ruangan_id);
-        // data: array of {id, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, user_id}
         return $this->sendResponse('success','Availabilities fetched.', $data);
     }
 
-    // auto mark finished (sama)
     public function autoMarkFinished()
     {
         $expired = $this->model->getExpiredBookings();

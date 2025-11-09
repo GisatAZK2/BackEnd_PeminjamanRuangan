@@ -2,6 +2,17 @@
 class Router
 {
     private static array $routes = [];
+    private static ?PDO $pdo = null;
+    private static mixed $cache = null;
+
+    /**
+     * Inisialisasi global dependency (PDO dan cache)
+     */
+    public static function init(PDO $pdo, $cache)
+    {
+        self::$pdo = $pdo;
+        self::$cache = $cache;
+    }
 
     public static function get(string $path, array|callable $handler)
     {
@@ -32,7 +43,7 @@ class Router
         ];
     }
 
-    public static function dispatch(PDO $pdo)
+    public static function dispatch()
     {
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         $method = $_SERVER['REQUEST_METHOD'];
@@ -47,7 +58,7 @@ class Router
             if ($route['method'] === $method && preg_match($pattern, $cleanUri, $matches)) {
                 array_shift($matches); // hapus full match
 
-                // Jika handler adalah callable closure
+                // Jika handler berupa Closure (callable)
                 if (is_callable($route['handler'])) {
                     return call_user_func($route['handler'], ...$matches);
                 }
@@ -58,16 +69,29 @@ class Router
 
                 if (!file_exists($controllerFile)) {
                     http_response_code(500);
-                    echo json_encode(["status" => "error", "message" => "Controller file $controllerClass tidak ditemukan"]);
+                    echo json_encode([
+                        "status" => "error",
+                        "message" => "Controller file $controllerClass tidak ditemukan"
+                    ]);
                     return;
                 }
 
                 require_once $controllerFile;
-                $controller = new $controllerClass($pdo);
+
+                // 🔹 Gunakan konstruktor dengan cache
+                try {
+                    $controller = new $controllerClass(self::$pdo, self::$cache);
+                } catch (ArgumentCountError) {
+                    // fallback jika controller belum diubah ke 2 argumen
+                    $controller = new $controllerClass(self::$pdo);
+                }
 
                 if (!method_exists($controller, $methodName)) {
                     http_response_code(500);
-                    echo json_encode(["status" => "error", "message" => "Method $methodName tidak ditemukan di $controllerClass"]);
+                    echo json_encode([
+                        "status" => "error",
+                        "message" => "Method $methodName tidak ditemukan di $controllerClass"
+                    ]);
                     return;
                 }
 

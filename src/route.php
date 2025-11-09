@@ -24,6 +24,7 @@ Router::post('/api/users/change-role', [UserController::class, 'changeRole']);
 
 // DIVISI ENDPOINTS (admin only)
 Router::get('/api/divisi', [DivisiController::class, 'getAll']);
+Router::get('/api/divisi/{id}', [DivisiController::class, 'getById']);
 Router::post('/api/divisi', [DivisiController::class, 'add']);
 Router::put('/api/divisi/{id}', [DivisiController::class, 'update']);
 Router::delete('/api/divisi/{id}', [DivisiController::class, 'delete']);
@@ -42,4 +43,4 @@ Router::post('/api/AutoFinishRoom',([RuanganController::class, 'autoMarkFinished
 // ========================================================
 // 🚀 Jalankan router
 // ========================================================
-Router::dispatch($pdo);
+Router::dispatch($pdo , $cache);

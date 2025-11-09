@@ -1,14 +1,16 @@
 <?php
 require_once __DIR__ . '/../models/UserModel.php';
-require_once __DIR__ . '/../src/jwt/JWT.php';
 
 class AuthController
 {
     private $model;
+    private $cache;
 
-    public function __construct($pdo)
+    
+    public function __construct(PDO $pdo, $cache)
     {
-        $this->model = new UserModel($pdo);
+        $this->cache = $cache;
+        $this->model = new UserModel($pdo, $cache);
     }
 
     public function login()

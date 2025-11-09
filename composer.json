@@ -19,6 +19,8 @@
         }
     ],
     "require": {
-        "phpmailer/phpmailer": "^7.0"
+        "phpmailer/phpmailer": "^7.0",
+        "symfony/cache": "^7.3",
+        "psr/simple-cache": "^3.0"
     }
 }
