@@ -128,6 +128,26 @@ password: string
 | `administrator` | Semua |
 
 **Response:** Data user lengkap
+```json
+{
+    "status": "success",
+    "message": "Data user ditemukan.",
+    "data": {
+        "id_user": 8,
+        "username": "admin01",
+        "nama": "SukiLine",
+        "nomor_telepon": "0867558999",
+        "email": "admin@gmail.com",
+        "password_hash": "$2y$12$/AMFFX..E4D38dxnOG.xD.WAwoj6jnSUJRjF4wwotxilEuFGxdxeu",
+        "password_plain": "admin123",
+        "id_divisi": 1,
+        "role": "administrator",
+        "is_logged_in": 1,
+        "is_pending_edit": 0
+    }
+}
+
+```
 
 ---
 
@@ -168,8 +188,23 @@ password: string
 #### `PUT /api/users/update`
 **Update user**
 
+**Only Administartor Can Edit Any Role ("Administrator", "Petugas", "Peminjam") And  Used Endpoint Change Role**
+
 **Role:** Semua (terbatas)  
 **Body:** Field yang ingin diubah + `id_user`
+**Example (Not From Role Administrator) (form-data):**
+```json
+{
+"id_user": 9,
+"nama": "SkiSuki Updated",
+"nomor_telepon": "087612433",
+ "username" : "teriyaki", 
+ "email": "gitasasd@gmail.com", 
+ "password" : "Ambadaba1", 
+ "id_divisi" : 2
+ }
+```
+
 
 > **Catatan:**  
 > - `peminjam` → hanya update diri sendiri  
@@ -223,7 +258,7 @@ password: string
 
 ### 3. Manajemen Divisi (`/api/divisi/*`)
 
-> **Hanya `administrator`**
+> **Only User Role `administrator`**
 
 #### `GET /api/divisi`
 **Ambil semua divisi (cache 1 jam)**
@@ -239,6 +274,12 @@ password: string
 
 #### `PUT /api/divisi/{id}`
 **Update divisi**
+**Example body Data**
+```json
+{
+  "nama_divisi": "IT Support"
+}
+```
 
 #### `DELETE /api/divisi/{id}`
 **Hapus divisi**
