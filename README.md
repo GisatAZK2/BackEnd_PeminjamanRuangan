@@ -1,8 +1,3 @@
-Berikut adalah file **`README.md`** lengkap dalam format **Markdown** yang mendokumentasikan **seluruh rute API**, **logika bisnis**, **perizinan role**, **deskripsi endpoint**, **request/response contoh**, serta **penjelasan keamanan & cache**. Cocok untuk dokumentasi proyek backend manajemen ruang rapat dengan PHP.
-
----
-
-```markdown
 # Sistem Manajemen Peminjaman Ruang Rapat
 
 Sistem backend berbasis PHP untuk mengelola peminjaman ruang rapat, user, divisi, dan notulen. Menggunakan **PDO**, **caching (PSR-6)**, **transaksi database**, **locking**, dan **middleware autentikasi berbasis cookie**.
