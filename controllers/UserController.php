@@ -104,37 +104,37 @@ class UserController
     // 🔹 ADD USER
     // ===============================
     public function add()
-    {
-        $user = AuthMiddleware::requireRole(['administrator', 'petugas'], $this->model);
-        $input = json_decode(file_get_contents('php://input'), true);
+{
+    $user = AuthMiddleware::requireRole(['administrator', 'petugas'], $this->model);
+    $input = json_decode(file_get_contents('php://input'), true);
 
-        if (json_last_error() !== JSON_ERROR_NONE) {
-            return $this->sendResponse("error", "Format JSON tidak valid.", null, 400);
-        }
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        return $this->sendResponse("error", "Format JSON tidak valid.", null, 400);
+    }
 
-        $required = ['username', 'nama', 'email', 'password', 'role', 'nomor_telepon', 'id_divisi'];
-        foreach ($required as $f) {
-            if (empty($input[$f])) {
-                return $this->sendResponse("error", "Field '$f' wajib diisi.", null, 400);
-            }
-        }
-
-        // Petugas hanya boleh tambah peminjam
-        if ($user['role'] === 'petugas' && $input['role'] !== 'peminjam') {
-            return $this->sendResponse("error", "Petugas hanya dapat menambahkan user dengan role 'peminjam'.", null, 403);
-        }
-
-        // 🔐 Hash password
-        $input['password_hash'] = password_hash($input['password'], PASSWORD_DEFAULT);
-        $input['password_plain'] = $input['password'];
-        unset($input['password']);
-
-        if ($this->model->insertUser($input)) {
-            $this->sendResponse("success", "User berhasil ditambahkan.", null, 201);
-        } else {
-            $this->sendResponse("error", "Gagal menambahkan user.", null, 500);
+    $required = ['username', 'nama', 'email', 'password', 'role', 'nomor_telepon', 'id_divisi'];
+    foreach ($required as $f) {
+        if (empty($input[$f])) {
+            return $this->sendResponse("error", "Field '$f' wajib diisi.", null, 400);
         }
     }
+
+    // 🔒 Jika user yang login adalah petugas, paksa role user baru menjadi 'peminjam'
+    if ($user['role'] === 'petugas') {
+        $input['role'] = 'peminjam';
+    }
+
+    // 🔐 Hash password
+    $input['password_hash'] = password_hash($input['password'], PASSWORD_DEFAULT);
+    $input['password_plain'] = $input['password'];
+    unset($input['password']);
+
+    if ($this->model->insertUser($input)) {
+        $this->sendResponse("success", "User berhasil ditambahkan.", null, 201);
+    } else {
+        $this->sendResponse("error", "Gagal menambahkan user.", null, 500);
+    }
+}
 
     // ===============================
     // 🔹 REQUEST EDIT (petugas → admin)

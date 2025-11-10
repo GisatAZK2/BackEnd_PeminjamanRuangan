@@ -57,6 +57,70 @@ class RuanganController
         }
     }
 
+    // 🟩 GET /api/ruangan
+    public function getroomAll()
+    {
+        try {
+            $data = $this->model->getAllRooms();
+            $this->sendResponse('success', 'Daftar ruangan diambil.', $data);
+        } catch (PDOException $e) {
+            $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    // 🟦 GET /api/ruangan/{id}
+    public function getroomById($id)
+    {
+        try {
+            $data = $this->model->getroomById($id);
+            if ($data) {
+                $this->sendResponse('success', 'Data ruangan ditemukan.', $data);
+            } else {
+                $this->sendResponse('error', 'Ruangan tidak ditemukan.', null, 404);
+            }
+        } catch (PDOException $e) {
+            $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    // 🟨 PUT /api/ruangan/{id}
+    public function updateRoom($id)
+    {
+        $user = AuthMiddleware::requireRole(['administrator']);
+        $input = json_decode(file_get_contents('php://input'), true);
+        if (!isset($input['ruangan_name']) || empty(trim($input['ruangan_name']))) {
+            return $this->sendResponse('error', 'Nama ruangan wajib diisi.', null, 400);
+        }
+
+        $ruangan_name = trim($input['ruangan_name']);
+        try {
+            $success = $this->model->updateRoom($id, $ruangan_name);
+            if ($success) {
+                $this->sendResponse('success', 'Ruangan berhasil diperbarui.', ['id' => $id, 'ruangan_name' => $ruangan_name]);
+            } else {
+                $this->sendResponse('error', 'Gagal memperbarui ruangan.', null, 500);
+            }
+        } catch (PDOException $e) {
+            $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
+    // 🟥 DELETE /api/ruangan/{id}
+    public function deleteRoom($id)
+    {
+        $user = AuthMiddleware::requireRole(['administrator']);
+        try {
+            $success = $this->model->deleteRoom($id);
+            if ($success) {
+                $this->sendResponse('success', 'Ruangan berhasil dihapus.', ['id' => $id]);
+            } else {
+                $this->sendResponse('error', 'Gagal menghapus ruangan.', null, 500);
+            }
+        } catch (PDOException $e) {
+            $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
+        }
+    }
+
     // create booking with transaction + lock
     public function createBooking()
     {

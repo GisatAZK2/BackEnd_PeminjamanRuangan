@@ -31,6 +31,34 @@ class RuanganModel
         return $data;
     }
 
+    // 🔹 Ambil ruangan berdasarkan ID
+    public function getroomById($id)
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM {$this->tableRuangan} WHERE id = ?");
+        $stmt->execute([$id]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    // 🔹 Update ruangan
+    public function updateRoom($id, $name)
+    {
+        $stmt = $this->pdo->prepare("UPDATE {$this->tableRuangan} SET ruangan_name = ? WHERE id = ?");
+        $success = $stmt->execute([$name, $id]);
+
+        if ($success && $this->cache) $this->cache->delete('ruangan_all');
+        return $success;
+    }
+
+    // 🔹 Hapus ruangan
+    public function deleteRoom($id)
+    {
+        $stmt = $this->pdo->prepare("DELETE FROM {$this->tableRuangan} WHERE id = ?");
+        $success = $stmt->execute([$id]);
+
+        if ($success && $this->cache) $this->cache->delete('ruangan_all');
+        return $success;
+    }
+
     public function addRoom($name)
     {
         $stmt = $this->pdo->prepare("INSERT INTO {$this->tableRuangan} (ruangan_name) VALUES (?)");
