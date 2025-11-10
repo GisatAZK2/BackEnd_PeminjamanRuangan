@@ -503,6 +503,3 @@ Notulen_files → id, pinjam_id, file_name, data_base64
 
 > **Dibangun dengan performa, keamanan, dan skalabilitas.**
 ```
-
-```
-File ini siap disimpan sebagai `README.md` di root proyek. Bisa juga diekspor ke **HTML/PDF** menggunakan tools seperti `grip` atau `pandoc`.
