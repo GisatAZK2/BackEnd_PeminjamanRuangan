@@ -496,10 +496,9 @@ Notulen_files → id, pinjam_id, file_name, data_base64
 
 ## Kontributor
 
-- Backend Developer: [Nama Anda]
+- Backend Developer: BackEnd Pemijaman Ruangan
 - Sistem: PHP Native + PDO + PSR-6 Cache
 
 ---
 
 > **Dibangun dengan performa, keamanan, dan skalabilitas.**
-```
