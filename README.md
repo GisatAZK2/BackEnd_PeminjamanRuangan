@@ -3,7 +3,7 @@
 Sistem backend berbasis PHP untuk mengelola peminjaman ruang rapat, user, divisi, dan notulen. Menggunakan **PDO**, **caching (PSR-6)**, **transaksi database**, **locking**, dan **middleware autentikasi berbasis cookie**.
 
 > **Tanggal Pembuatan:** 10 November 2025  
-> **Teknologi:** PHP 8+, MySQL, PSR-16 Cache, JWT/Cookie Auth
+> **Teknologi:** PHP 8+, MySQL, PSR-16 Cache, Cookie Auth
 
 ---
 
