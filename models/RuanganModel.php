@@ -257,76 +257,85 @@ class RuanganModel
     // ===============================
     // Get booking history — FIX N+1 dengan JOIN
     public function getBookingHistory($user, $filter = 'semua')
-    {
-        $cacheKey = "booking_history_user_{$user['id_user']}_{$filter}";
-        if (($user['role'] ?? '') !== 'peminjam') {
-            $cacheKey = "booking_history_all_{$filter}";
-        }
+{
+    $role = $user['role'] ?? 'peminjam';
+    $userId = $user['id_user'];
 
-        $cached = $this->cache->get($cacheKey);
-        if ($cached !== null) {
-            return $cached;
-        }
+    // 🔹 Tentukan cache key berdasar role dan filter
+    $cacheKey = "booking_history_{$role}_{$userId}_{$filter}";
+    $cached = $this->cache->get($cacheKey);
+    if ($cached !== null) return $cached;
 
-        $sql = "
-            SELECT 
-                pr.*, 
-                u.nama AS nama_user, 
-                r.ruangan_name,
-                GROUP_CONCAT(
-                    CONCAT(nf.id, '|', nf.file_name, '|', nf.file_type, '|', nf.file_size, '|', nf.data_base64)
-                    SEPARATOR '||'
-                ) AS notulen_raw
-            FROM {$this->tablePinjam} pr
-            JOIN {$this->tableUser} u ON pr.user_id = u.id_user
-            JOIN {$this->tableRuangan} r ON pr.ruangan_id = r.id
-            LEFT JOIN {$this->tableNotulen} nf ON nf.pinjam_id = pr.id
-        ";
-        $params = [];
+    // 🔹 Query dasar
+    $sql = "
+        SELECT 
+            pr.*, 
+            u.nama AS nama_user, 
+            u.role AS role_user,
+            r.ruangan_name,
+            GROUP_CONCAT(
+                CONCAT(nf.id, '|', nf.file_name, '|', nf.file_type, '|', nf.file_size, '|', nf.data_base64)
+                SEPARATOR '||'
+            ) AS notulen_raw
+        FROM {$this->tablePinjam} pr
+        JOIN {$this->tableUser} u ON pr.user_id = u.id_user
+        JOIN {$this->tableRuangan} r ON pr.ruangan_id = r.id
+        LEFT JOIN {$this->tableNotulen} nf ON nf.pinjam_id = pr.id
+        WHERE 1=1
+    ";
 
-        if (($user['role'] ?? '') === 'peminjam') {
-            $sql .= " WHERE pr.user_id = ?";
-            $params[] = $user['id_user'];
-        } else {
-            $sql .= " WHERE 1=1";
-        }
+    $params = [];
 
-        if ($filter !== 'semua') {
-            $sql .= " AND pr.status = ?";
-            $params[] = $filter;
-        }
+    // 🔹 Filter berdasarkan role
+    if ($role === 'peminjam') {
+        // Hanya data miliknya sendiri
+        $sql .= " AND pr.user_id = ?";
+        $params[] = $userId;
+    } elseif (in_array($role, ['administrator', 'petugas'])) {
+        // Semua data dari user dengan role 'peminjam'
+        $sql .= " AND u.role = 'peminjam'";
+    }
 
-        $sql .= " GROUP BY pr.id ORDER BY pr.created_at DESC";
+    // 🔹 Filter status
+    if ($filter !== 'semua') {
+        $sql .= " AND pr.status = ?";
+        $params[] = $filter;
+    }
 
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($params);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $sql .= " GROUP BY pr.id ORDER BY pr.created_at DESC";
 
-        foreach ($rows as &$row) {
-            $notulen = [];
-            if ($row['notulen_raw']) {
-                $items = explode('||', $row['notulen_raw']);
-                foreach ($items as $item) {
-                    $parts = explode('|', $item, 5);
-                    if (count($parts) === 5) {
-                        $notulen[] = [
-                            'id' => (int)$parts[0],
-                            'name' => $parts[1],
-                            'type' => $parts[2],
-                            'size' => (int)$parts[3],
-                            'preview_url' => 'data:' . $parts[2] . ';base64,' . $parts[4],
-                            'download_url' => "/api/downloadNotulen/{$parts[0]}"
-                        ];
-                    }
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute($params);
+    $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // 🔹 Format ulang data notulen
+    foreach ($rows as &$row) {
+        $notulen = [];
+        if (!empty($row['notulen_raw'])) {
+            $items = explode('||', $row['notulen_raw']);
+            foreach ($items as $item) {
+                $parts = explode('|', $item, 5);
+                if (count($parts) === 5) {
+                    $notulen[] = [
+                        'id' => (int)$parts[0],
+                        'name' => $parts[1],
+                        'type' => $parts[2],
+                        'size' => (int)$parts[3],
+                        'preview_url' => 'data:' . $parts[2] . ';base64,' . $parts[4],
+                        'download_url' => "/api/downloadNotulen/{$parts[0]}"
+                    ];
                 }
             }
-            $row['notulen'] = $notulen;
-            unset($row['notulen_raw']);
         }
-
-        $this->cache->set($cacheKey, $rows, 120); // 2 menit
-        return $rows;
+        $row['notulen'] = $notulen;
+        unset($row['notulen_raw']);
     }
+
+    // 🔹 Simpan ke cache selama 2 menit
+    $this->cache->set($cacheKey, $rows, 120);
+
+    return $rows;
+}
 
     // ===============================
     // Get approved bookings by room (cached)
