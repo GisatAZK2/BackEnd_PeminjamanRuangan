@@ -5,6 +5,8 @@ Sistem backend berbasis PHP untuk mengelola peminjaman ruang rapat, user, divisi
 > **Tanggal Pembuatan:** 10 November 2025  
 > **Teknologi:** PHP 8+, MySQL, PSR-16 Cache, Cookie Auth
 
+> **Base Url Api :** https://backendpeminjamanruangan-production-f204.up.railway.app
+
 ---
 
 ## Fitur Utama
