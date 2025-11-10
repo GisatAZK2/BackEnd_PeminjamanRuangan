@@ -384,6 +384,45 @@ files[]: (file1.pdf, file2.docx)
 
 > **FIX N+1** → JOIN + `GROUP_CONCAT` notulen
 
+**Example Response (Please FrontEnd Convert Base64 String To File )**
+```json
+
+{
+    "status": "success",
+    "message": "Histori peminjaman berhasil diambil.",
+    "data": [
+        {
+            "id": 3,
+            "user_id": 11,
+            "ruangan_id": 3,
+            "kegiatan": "Rapat Ambatublow",
+            "tanggal_mulai": "2025-11-09",
+            "tanggal_selesai": "2025-11-09",
+            "jam_mulai": "12:00:00",
+            "jam_selesai": "21:00:00",
+            "status": "selesai",
+            "tanggal_selesai_rapat": "2025-11-09 20:58:00",
+            "keterangan": "Rapat selesai dan notulen telah diunggah.",
+            "created_at": "2025-11-09 20:55:02",
+            "nama_user": "New Peminjam",
+            "role_user": "peminjam",
+            "ruangan_name": "Ambatublow",
+            "notulen": [
+                {
+                    "id": 7,
+                    "name": "4815d6138173f461a7a60f654b1103f3 (1).jpg",
+                    "type": "image/jpeg",
+                    "size": 35708,
+                    "preview_url": "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQ......",
+                    "download_url": "/api/downloadNotulen/7"
+                }
+            ]
+        }
+    ]
+}
+
+```
+
 ---
 
 #### `GET /api/roomAvailability`
