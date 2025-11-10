@@ -506,7 +506,3 @@ Notulen_files → id, pinjam_id, file_name, data_base64
 
 ```
 File ini siap disimpan sebagai `README.md` di root proyek. Bisa juga diekspor ke **HTML/PDF** menggunakan tools seperti `grip` atau `pandoc`.
-
-Ingin versi **Postman Collection** atau **OpenAPI (Swagger)** juga? Saya bisa buatkan!
-```
-
