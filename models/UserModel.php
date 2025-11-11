@@ -136,7 +136,7 @@ class UserModel
     public function insertUser(array $data)
     {
         $stmt = $this->pdo->prepare("
-            INSERT INTO User (username, nama, nomor_telepon, email, password_hash, password_plain, id_divisi, role, is_logged_in)
+            INSERT INTO {$this->tableName} (username, nama, nomor_telepon, email, password_hash, password_plain, id_divisi, role, is_logged_in)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
         ");
         return $stmt->execute([
