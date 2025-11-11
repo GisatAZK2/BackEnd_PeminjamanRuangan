@@ -20,6 +20,7 @@ class CorsMiddleware
         }
 
         header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+        header("Access-Control-Expose-Headers: Set-Cookie");
         header("Access-Control-Allow-Headers: Content-Type, X-API-KEY, Authorization, X-Requested-With");
 
         if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {

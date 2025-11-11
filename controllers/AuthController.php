@@ -49,7 +49,7 @@ class AuthController
             'expires'  => time() + $maxAge,
             'path'     => '/',
             'secure'   => $secure,
-            'httponly' => true, // penting: mencegah akses JS
+            'httponly' => false, // penting: mencegah akses JS
             'samesite' => 'None'
         ]);
 
