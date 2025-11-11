@@ -132,6 +132,26 @@ class UserModel
         }
     }
 
+    // 🔹 Tambah user baru (hash + simpan plaintext)
+    public function insertUser(array $data)
+    {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO User (username, nama, nomor_telepon, email, password_hash, password_plain, id_divisi, role, is_logged_in)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0)
+        ");
+        return $stmt->execute([
+            $data['username'],
+            $data['nama'],
+            $data['nomor_telepon'] ?? '',
+            $data['email'],
+            $data['password_hash'],
+            $data['password_plain'], // disimpan juga versi asli
+            $data['id_divisi'] ?? null,
+            $data['role'] ?? 'peminjam'
+        ]);
+    }
+
+
     // ===============================
     // 🔹 Update user umum (invalidate cache)
     // ===============================
