@@ -6,6 +6,7 @@ class UserModel
     private $pdo;
     private $cache;
     private $tableName = 'user';
+    private $tableDivisiName = 'divisi';
 
     public function __construct(PDO $pdo, CacheInterface $cache)
     {
@@ -38,26 +39,42 @@ class UserModel
         return $user;
     }
 
-    // ===============================
-    // 🔹 Ambil user by ID (cache)
-    // ===============================
-    public function getUserById(int $id_user)
-    {
-        $cacheKey = "user_by_id_" . $id_user;
-        if ($this->cache->has($cacheKey)) {
-            return $this->cache->get($cacheKey);
+            // ===============================
+        // 🔹 Ambil user by ID (JOIN + cache)
+        // ===============================
+        public function getUserById(int $id_user)
+        {
+            $cacheKey = "user_by_id_" . $id_user;
+            if ($this->cache->has($cacheKey)) {
+                return $this->cache->get($cacheKey);
+            }
+
+            $stmt = $this->pdo->prepare("
+                SELECT 
+                    u.id_user,
+                    u.username,
+                    u.password_hash,
+                    u.role,
+                    u.nama,
+                    u.email,
+                    u.nomor_telepon,
+                    d.nama_divisi,
+                    u.is_logged_in
+                FROM {$this->tableName} u
+                LEFT JOIN divisi d ON u.id_divisi = d.id_divisi
+                WHERE u.id_user = ?
+            ");
+            $stmt->execute([$id_user]);
+            $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($user) {
+                $this->cache->set($cacheKey, $user, 300); // cache 5 menit
+            }
+
+            return $user;
         }
 
-        $stmt = $this->pdo->prepare("SELECT * FROM {$this->tableName} WHERE id_user = ?");
-        $stmt->execute([$id_user]);
-        $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($user) {
-            $this->cache->set($cacheKey, $user, 300);
-        }
-
-        return $user;
-    }
 
     // ===============================
     // 🔹 Ambil semua user (cache + hindari N+1)
