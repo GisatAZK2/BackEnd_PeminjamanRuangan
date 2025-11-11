@@ -48,7 +48,7 @@ class AuthController
         setcookie("user_info", json_encode($user_info), [
             'expires'  => time() + $maxAge,
             'path'     => '/',
-            'secure'   => $secure,
+            'secure'   => true,
             'httponly' => false, // penting: mencegah akses JS
             'samesite' => 'None'
         ]);
