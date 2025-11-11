@@ -137,15 +137,14 @@ password: string
     "data": {
         "id_user": 8,
         "username": "admin01",
-        "nama": "SukiLine",
-        "nomor_telepon": "0867558999",
-        "email": "admin@gmail.com",
-        "password_hash": "$2y$12$/AMFFX..E4D38dxnOG.xD.WAwoj6jnSUJRjF4wwotxilEuFGxdxeu",
-        "password_plain": "admin123",
-        "id_divisi": 1,
+        "password_hash": "{example_password}",
         "role": "administrator",
-        "is_logged_in": 1,
-        "is_pending_edit": 0
+        "nama": "SukiLine",
+        "email": "admin@gmail.com",
+        "nomor_telepon": "0867558999",
+        "id_divisi": 1,
+        "nama_divisi": "IT Support",
+        "is_logged_in": 1
     }
 }
 
