@@ -330,35 +330,6 @@ password: string
 #### `GET /api/divisi`
 **Ambil semua divisi (cache 1 jam)**
 
-#### `GET /api/statistik/divisi`
-**Ambil Total Anggota Berdasarkan Divisi**
-**Response:**
-```json
-
-{
-    "status": "success",
-    "data": [
-        {
-            "nama_divisi": "IT Support",
-            "total_user": 3
-        },
-        {
-            "nama_divisi": "Keuangan",
-            "total_user": 1
-        },
-        {
-            "nama_divisi": "Sumber Daya Manusia",
-            "total_user": 0
-        },
-        {
-            "nama_divisi": "Marketing",
-            "total_user": 0
-        }
-    ]
-}
-
-```
-
 #### `GET /api/divisi/{id}`
 **Ambil divisi berdasarkan ID (cache per ID)**
 

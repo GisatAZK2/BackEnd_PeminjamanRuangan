@@ -73,17 +73,4 @@ class StatistikModel
         $stmt->execute([$user_id, $status]);
         return $stmt->fetchColumn();
     }
-
-    // ========== KHUSUS ADMIN ===========
-    public function countUsersPerDivisi()
-    {
-        $sql = "
-            SELECT d.nama_divisi, COUNT(u.id_user) as total_user
-            FROM divisi d
-            LEFT JOIN user u ON d.id_divisi = u.id_divisi
-            GROUP BY d.id_divisi
-            ORDER BY total_user DESC
-        ";
-        return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
-    }
 }

@@ -74,33 +74,6 @@ class StatistikController
     }
 
     // ============================================================
-    // 🔹 Statistik jumlah anggota per divisi
-    // ============================================================
-    public function statistikDivisi()
-    {
-        header('Content-Type: application/json');
-        $user = $this->getUser();
-        if (!$user) {
-            http_response_code(401);
-            echo json_encode(["status" => "error", "message" => "Unauthorized"]);
-            return;
-        }
-
-        // Hanya administrator yang boleh
-        if ($user['role'] !== 'administrator') {
-            http_response_code(403);
-            echo json_encode(["status" => "error", "message" => "Akses ditolak"]);
-            return;
-        }
-
-        $data = $this->model->countUsersPerDivisi();
-        echo json_encode([
-            "status" => "success",
-            "data" => $data
-        ]);
-    }
-
-    // ============================================================
     // 🔹 Helper: ambil user dari cookie (misal: user_info)
     // ============================================================
     private function getUser()

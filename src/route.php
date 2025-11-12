@@ -35,8 +35,6 @@ Router::get('/api/divisi/{id}', [DivisiController::class, 'getById']);
 Router::post('/api/divisi', [DivisiController::class, 'add']);
 Router::put('/api/divisi/{id}', [DivisiController::class, 'update']);
 Router::delete('/api/divisi/{id}', [DivisiController::class, 'delete']);
-Router::get('/api/statistik/divisi', [StatistikController::class, 'statistikDivisi']);
-
 
 // ========================================================
 // 🏢 Room Management (protected)

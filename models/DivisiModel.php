@@ -13,15 +13,27 @@ class DivisiModel
     }
 
     // ===============================
-   public function getAll()
+public function getAll()
 {
-    $cacheKey = 'divisi.all';
+    $cacheKey = 'divisi.all.with_user_count';
     $cached = $this->cache->get($cacheKey);
 
     if ($cached === null) {
-        $stmt = $this->pdo->query("SELECT * FROM {$this->tableDivisi} ORDER BY nama_divisi");
+        $sql = "
+            SELECT 
+                d.id_divisi,
+                d.nama_divisi,
+                COUNT(u.id_user) AS jumlah_anggota
+            FROM {$this->tableDivisi} d
+            LEFT JOIN user u ON d.id_divisi = u.id_divisi
+            GROUP BY d.id_divisi
+            ORDER BY d.nama_divisi ASC
+        ";
+
+        $stmt = $this->pdo->query($sql);
         $cached = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $this->cache->set($cacheKey, $cached, 3600); // simpan 1 jam
+
+        $this->cache->set($cacheKey, $cached, 3600); // cache 1 jam
     }
 
     return $cached;
