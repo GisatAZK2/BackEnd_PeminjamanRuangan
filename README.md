@@ -184,6 +184,72 @@ password: string
 }
 ```
 
+
+#### `GET /api/statistik`
+**Get Statistik Data**
+
+**Role:** `All Role`  
+
+**Jika Administrator**
+**Response:**
+```json
+{
+  "status": "success",
+  "role": "administrator",
+  "data": {
+    "total_user": 20,
+    "total_divisi": 5,
+    "total_ruangan": 8,
+    "total_peminjaman": 50,
+    "total_petugas": 3,
+    "total_peminjam": 12,
+    "peminjaman_per_hari": [
+      {"tanggal": "2025-11-12", "total": 5},
+      {"tanggal": "2025-11-11", "total": 3}
+    ],
+    "peminjaman_per_status": [
+      {"status": "pending", "total": 2},
+      {"status": "disetujui", "total": 5}
+    ]
+  }
+}
+```
+**Jika Petugas**
+**Response:**
+```json
+{
+  "status": "success",
+  "role": "petugas",
+  "data": {
+    "total_peminjaman": 50,
+    "peminjaman_per_status": [
+      {"status": "pending", "total": 2},
+      {"status": "disetujui", "total": 5}
+    ],
+    "peminjaman_per_hari": [
+      {"tanggal": "2025-11-12", "total": 5}
+    ],
+    "total_peminjam": 12,
+    "total_ruangan": 8
+  }
+}
+```
+**Jika Peminjam**
+**Response:**
+```json
+{
+  "status": "success",
+  "role": "peminjam",
+  "data": {
+    "total_pengajuan": 4,
+    "total_disetujui": 2,
+    "total_ditolak": 1
+  }
+}
+```
+---
+
+
 ---
 
 #### `PUT /api/users/update`
@@ -263,6 +329,35 @@ password: string
 
 #### `GET /api/divisi`
 **Ambil semua divisi (cache 1 jam)**
+
+#### `GET /api/statistik/divisi`
+**Ambil Total Anggota Berdasarkan Divisi**
+**Response:**
+```json
+
+{
+    "status": "success",
+    "data": [
+        {
+            "nama_divisi": "IT Support",
+            "total_user": 3
+        },
+        {
+            "nama_divisi": "Keuangan",
+            "total_user": 1
+        },
+        {
+            "nama_divisi": "Sumber Daya Manusia",
+            "total_user": 0
+        },
+        {
+            "nama_divisi": "Marketing",
+            "total_user": 0
+        }
+    ]
+}
+
+```
 
 #### `GET /api/divisi/{id}`
 **Ambil divisi berdasarkan ID (cache per ID)**

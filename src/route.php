@@ -10,6 +10,13 @@ ApiKeyMiddleware::validate();
 Router::post('/api/login', [AuthController::class, 'login']);
 Router::post('/api/logout', [AuthController::class, 'logout']);
 
+
+// ========================================================
+// 🔓 Dashboard routes (All Role)
+// ========================================================
+Router::get('/api/statistik', [StatistikController::class, 'index']);
+
+
 // ========================================================
 // 👤 User Management (protected)
 // ========================================================
@@ -28,6 +35,9 @@ Router::get('/api/divisi/{id}', [DivisiController::class, 'getById']);
 Router::post('/api/divisi', [DivisiController::class, 'add']);
 Router::put('/api/divisi/{id}', [DivisiController::class, 'update']);
 Router::delete('/api/divisi/{id}', [DivisiController::class, 'delete']);
+Router::get('/api/statistik/divisi', [StatistikController::class, 'statistikDivisi']);
+
+
 // ========================================================
 // 🏢 Room Management (protected)
 // ========================================================
