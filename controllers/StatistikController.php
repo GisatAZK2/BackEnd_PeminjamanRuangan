@@ -1,28 +1,43 @@
 <?php
 require_once __DIR__ . '/../models/StatistikModel.php';
+
 class StatistikController
 {
     private $model;
+
     public function __construct(PDO $pdo)
     {
         $this->model = new StatistikModel($pdo);
     }
+
     // ============================================================
-    // 🔹 Statistik utama berdasarkan role user
+    // 🔹 GET /api/statistik — Statistik berdasarkan role user
     // ============================================================
     public function index()
     {
         header('Content-Type: application/json');
-        // Ambil user dari session / cookie
+
+        // 🔸 Ambil data user dari cookie/session
         $user = $this->getUser();
         if (!$user) {
             http_response_code(401);
             echo json_encode(["status" => "error", "message" => "Unauthorized"]);
             return;
         }
-        $role = $user['role'];
-        $id_user = $user['id_user'];
+
+        $role = $user['role'] ?? null;
+        $id_user = $user['id_user'] ?? null;
+
+        if (!$role) {
+            http_response_code(403);
+            echo json_encode(["status" => "error", "message" => "Role tidak ditemukan"]);
+            return;
+        }
+
         switch ($role) {
+            // ====================================================
+            // 👑 ADMINISTRATOR
+            // ====================================================
             case 'administrator':
                 $data = [
                     'total_user' => $this->model->countUsers(),
@@ -35,6 +50,10 @@ class StatistikController
                     'peminjaman_per_status' => $this->model->countPeminjamanPerStatus(),
                 ];
                 break;
+
+            // ====================================================
+            // 🧰 PETUGAS
+            // ====================================================
             case 'petugas':
                 $data = [
                     'total_peminjaman' => $this->model->countAllPeminjaman(),
@@ -44,6 +63,10 @@ class StatistikController
                     'total_ruangan' => $this->model->countRuangan(),
                 ];
                 break;
+
+            // ====================================================
+            // 👤 PEMINJAM
+            // ====================================================
             case 'peminjam':
                 $data = [
                     'total_pengajuan' => $this->model->countUserPeminjaman($id_user),
@@ -51,24 +74,28 @@ class StatistikController
                     'total_ditolak' => $this->model->countUserPeminjamanByStatus($id_user, 'ditolak'),
                 ];
                 break;
+
             default:
                 http_response_code(403);
                 echo json_encode(["status" => "error", "message" => "Role tidak dikenali"]);
                 return;
         }
+
         echo json_encode([
             "status" => "success",
             "role" => $role,
             "data" => $data
         ]);
     }
+
     // ============================================================
-    // 🔹 Helper: ambil user dari cookie (misal: user_info)
+    // 🔹 Helper: ambil user dari cookie user_info
     // ============================================================
     private function getUser()
     {
         if (!isset($_COOKIE['user_info'])) return null;
         $decoded = urldecode($_COOKIE['user_info']);
-        return json_decode($decoded, true);
+        $user = json_decode($decoded, true);
+        return is_array($user) ? $user : null;
     }
 }
