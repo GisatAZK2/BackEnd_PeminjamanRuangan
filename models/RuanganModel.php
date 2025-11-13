@@ -261,6 +261,7 @@ class RuanganModel
     }
     // ===============================
     // Get booking history — tanpa JOIN, gunakan snapshot & GROUP_CONCAT untuk notulen
+    // Get booking history — tanpa JOIN, gunakan snapshot & GROUP_CONCAT untuk notulen
 public function getBookingHistory($user, $filter) {
     $role = $user['role'] ?? 'peminjam';
     $userId = $user['id_user'];
@@ -269,7 +270,7 @@ public function getBookingHistory($user, $filter) {
         SELECT
             pr.id,
             pr.user_id,
-            COALESCE(u.nama_lengkap, pr.nama_user_snapshot) AS nama_user,
+            COALESCE(u.nama, pr.nama_user_snapshot) AS nama_user,
             pr.ruangan_id,
             COALESCE(r.ruangan_name, pr.nama_ruangan_snapshot) AS ruangan_name,
             pr.kegiatan,
@@ -284,8 +285,8 @@ public function getBookingHistory($user, $filter) {
                 SEPARATOR '||'
             ) AS notulen_raw
         FROM {$this->tablePinjam} pr
-        LEFT JOIN users u ON u.id = pr.user_id AND u.deleted_at IS NULL
-        LEFT JOIN ruangan r ON r.id = pr.ruangan_id AND r.deleted_at IS NULL
+        LEFT JOIN user u ON u.id_user = pr.user_id
+        LEFT JOIN ruangan r ON r.id = pr.ruangan_id
         LEFT JOIN {$this->tableNotulen} nf ON nf.pinjam_id = pr.id
         WHERE 1=1
     ";
@@ -322,7 +323,7 @@ public function getBookingHistory($user, $filter) {
                         'name' => $parts[1],
                         'type' => $parts[2],
                         'size' => (int)$parts[3],
-                        'base64' => $parts[4], // untuk download di FE
+                        'base64' => $parts[4],
                     ];
                 }
             }
@@ -333,6 +334,7 @@ public function getBookingHistory($user, $filter) {
 
     return $rows;
 }
+
     // ===============================
     // Get approved bookings by room (cached)
     public function getApprovedBookingsByRoom($ruangan_id)
