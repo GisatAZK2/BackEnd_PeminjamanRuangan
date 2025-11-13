@@ -1,4 +1,3 @@
-
 <?php
 use Psr\SimpleCache\CacheInterface;
 
