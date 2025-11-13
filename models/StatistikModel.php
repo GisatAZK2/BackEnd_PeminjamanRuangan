@@ -1,3 +1,4 @@
+
 <?php
 class StatistikModel
 {
@@ -6,35 +7,29 @@ class StatistikModel
     {
         $this->pdo = $pdo;
     }
-
     // ========== ADMIN =============
     public function countUsers()
     {
         return $this->pdo->query("SELECT COUNT(*) FROM user")->fetchColumn();
     }
-
     public function countDivisi()
     {
         return $this->pdo->query("SELECT COUNT(*) FROM divisi")->fetchColumn();
     }
-
     public function countRuangan()
     {
         return $this->pdo->query("SELECT COUNT(*) FROM ruangan")->fetchColumn();
     }
-
     public function countAllPeminjaman()
     {
         return $this->pdo->query("SELECT COUNT(*) FROM pinjam_ruangan")->fetchColumn();
     }
-
     public function countUsersByRole($role)
     {
         $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM user WHERE role = ?");
         $stmt->execute([$role]);
         return $stmt->fetchColumn();
     }
-
     public function countPeminjamanPerHari()
     {
         $sql = "
@@ -45,7 +40,6 @@ class StatistikModel
         ";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
-
     public function countPeminjamanPerStatus()
     {
         $sql = "
@@ -55,10 +49,8 @@ class StatistikModel
         ";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
-
     // ========== PETUGAS ===========
     // (pakai fungsi yang sama di atas)
-
     // ========== PEMINJAM ===========
     public function countUserPeminjaman($user_id)
     {
@@ -66,7 +58,6 @@ class StatistikModel
         $stmt->execute([$user_id]);
         return $stmt->fetchColumn();
     }
-
     public function countUserPeminjamanByStatus($user_id, $status)
     {
         $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE user_id = ? AND status = ?");

@@ -7,13 +7,11 @@ class RuanganModel
     private $tablePinjam = 'pinjam_ruangan';
     private $tableUser = 'user';
     private $tableNotulen = 'notulen_files';
-
     public function __construct(PDO $pdo, $cache)
     {
         $this->pdo = $pdo;
         $this->cache = $cache;
     }
-
     // ===============================
     // Ambil semua ruangan (cache 5 menit)
     public function getAllRooms()
@@ -23,14 +21,11 @@ class RuanganModel
         if ($cached !== null) {
             return $cached;
         }
-
         $stmt = $this->pdo->query("SELECT * FROM {$this->tableRuangan} ORDER BY created_at DESC");
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         $this->cache->set($cacheKey, $data, 300); // 5 menit
         return $data;
     }
-
     // 🔹 Ambil ruangan berdasarkan ID
     public function getroomById($id)
     {
@@ -38,50 +33,75 @@ class RuanganModel
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-
-    // 🔹 Update ruangan
-    public function updateRoom($id, $name)
-    {
-        $stmt = $this->pdo->prepare("UPDATE {$this->tableRuangan} SET ruangan_name = ? WHERE id = ?");
-        $success = $stmt->execute([$name, $id]);
-
-        if ($success && $this->cache) $this->cache->delete('ruangan_all');
-        return $success;
-    }
-
-    // 🔹 Hapus ruangan
-    public function deleteRoom($id)
-    {
-        $stmt = $this->pdo->prepare("DELETE FROM {$this->tableRuangan} WHERE id = ?");
-        $success = $stmt->execute([$id]);
-
-        if ($success && $this->cache) $this->cache->delete('ruangan_all');
-        return $success;
-    }
-
+    // 🔹 Tambah ruangan + invalidate cache
     public function addRoom($name)
     {
         $stmt = $this->pdo->prepare("INSERT INTO {$this->tableRuangan} (ruangan_name) VALUES (?)");
         $success = $stmt->execute([$name]);
-
         if ($success) {
             $this->cache->delete('ruangan_all');
         }
         return $success;
     }
-
-    // ===============================
-    // Create booking
-    public function createBooking($data)
+    // 🔹 Update ruangan + sync snapshot ke pinjam_ruangan + invalidate cache
+    public function updateRoom($id, $name)
     {
+        $this->pdo->beginTransaction();
+        try {
+            $stmt = $this->pdo->prepare("UPDATE {$this->tableRuangan} SET ruangan_name = ? WHERE id = ?");
+            $success = $stmt->execute([$name, $id]);
+            if ($success) {
+                // Sync snapshot ke pinjam_ruangan
+                $syncStmt = $this->pdo->prepare("UPDATE {$this->tablePinjam} SET nama_ruangan_snapshot = ? WHERE ruangan_id = ?");
+                $syncStmt->execute([$name, $id]);
+                $this->cache->delete('ruangan_all');
+                $this->cache->delete("approved_bookings_room_{$id}");
+                $this->cache->delete("booking_history_user_*");
+            }
+            $this->pdo->commit();
+            return $success;
+        } catch (Exception $e) {
+            $this->pdo->rollBack();
+            return false;
+        }
+    }
+    // 🔹 Hapus ruangan + invalidate cache (snapshot pinjam_ruangan tetap ada)
+    public function deleteRoom($id)
+    {
+        $stmt = $this->pdo->prepare("DELETE FROM {$this->tableRuangan} WHERE id = ?");
+        $success = $stmt->execute([$id]);
+        if ($success && $this->cache) {
+            $this->cache->delete('ruangan_all');
+            $this->cache->delete("approved_bookings_room_{$id}");
+        }
+        return $success;
+    }
+    // ===============================
+    // Create booking + simpan snapshot user & ruangan
+    public function createBooking($data)
+{
+    try {
+        // Ambil snapshot nama_user dan nama_ruangan
+        $userStmt = $this->pdo->prepare("SELECT nama FROM {$this->tableUser} WHERE id_user = ?");
+        $userStmt->execute([$data['user_id']]);
+        $user = $userStmt->fetch(PDO::FETCH_ASSOC);
+        $nama_user = $user['nama'] ?? '';
+
+        $roomStmt = $this->pdo->prepare("SELECT ruangan_name FROM {$this->tableRuangan} WHERE id = ?");
+        $roomStmt->execute([$data['ruangan_id']]);
+        $room = $roomStmt->fetch(PDO::FETCH_ASSOC);
+        $nama_ruangan = $room['ruangan_name'] ?? '';
+
         $stmt = $this->pdo->prepare("
             INSERT INTO {$this->tablePinjam}
-                (user_id, ruangan_id, kegiatan, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+                (user_id, nama_user_snapshot, ruangan_id, nama_ruangan_snapshot, kegiatan, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
         ");
         $success = $stmt->execute([
             $data['user_id'],
+            $nama_user,
             $data['ruangan_id'],
+            $nama_ruangan,
             $data['kegiatan'],
             $data['tanggal_mulai'],
             $data['tanggal_selesai'],
@@ -93,9 +113,13 @@ class RuanganModel
             $this->cache->delete("booking_history_user_{$data['user_id']}");
             $this->cache->delete("approved_bookings_room_{$data['ruangan_id']}");
         }
-        return $success;
-    }
 
+        return $success;
+    } catch (Exception $e) {
+        error_log('createBooking model error: ' . $e->getMessage());
+        return false;
+    }
+}
     // ===============================
     // Cek ketersediaan ruangan
     public function isRoomAvailable($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
@@ -120,7 +144,6 @@ class RuanganModel
         ]);
         return $stmt->fetchColumn() == 0;
     }
-
     public function isRoomAvailableForUpdate($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
     {
         $sql = "
@@ -146,34 +169,28 @@ class RuanganModel
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return count($rows) === 0;
     }
-
     // ===============================
-    // Get booking
+    // Get booking (gunakan snapshot, tanpa JOIN)
     public function getBookingById($id)
     {
         $stmt = $this->pdo->prepare("
-            SELECT pr.*, u.nama AS nama_user, r.ruangan_name
+            SELECT pr.*, pr.nama_user_snapshot AS nama_user, pr.nama_ruangan_snapshot AS ruangan_name
             FROM {$this->tablePinjam} pr
-            JOIN {$this->tableUser} u ON pr.user_id = u.id_user
-            JOIN {$this->tableRuangan} r ON pr.ruangan_id = r.id
             WHERE pr.id = ?
         ");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-
     public function getBookingByIdForUpdate($id)
     {
         $stmt = $this->pdo->prepare("SELECT * FROM {$this->tablePinjam} WHERE id = ? FOR UPDATE");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-
     public function updateStatus($id, $status, $keterangan = null)
     {
         $stmt = $this->pdo->prepare("UPDATE {$this->tablePinjam} SET status = ?, keterangan = ? WHERE id = ?");
         $success = $stmt->execute([$status, $keterangan, $id]);
-
         if ($success) {
             $this->cache->delete("booking_history_all");
             $this->cache->delete("booking_history_user_*");
@@ -181,7 +198,6 @@ class RuanganModel
         }
         return $success;
     }
-
     // ===============================
     // Upload notulen multi
     public function uploadNotulenMulti($pinjam_id, $files)
@@ -189,16 +205,13 @@ class RuanganModel
         if (!isset($files['name'])) return false;
         $count = is_array($files['name']) ? count($files['name']) : 1;
         $uploaded = false;
-
         for ($i = 0; $i < $count; $i++) {
             $name = is_array($files['name']) ? $files['name'][$i] : $files['name'];
             $tmp = is_array($files['tmp_name']) ? $files['tmp_name'][$i] : $files['tmp_name'];
             $type = is_array($files['type']) ? $files['type'][$i] : $files['type'];
             $size = is_array($files['size']) ? $files['size'][$i] : $files['size'];
             $error = is_array($files['error']) ? $files['error'][$i] : $files['error'];
-
             if ($error !== UPLOAD_ERR_OK || $size > 16 * 1024 * 1024) continue;
-
             $dataBase64 = base64_encode(file_get_contents($tmp));
             $stmt = $this->pdo->prepare("
                 INSERT INTO {$this->tableNotulen} (pinjam_id, file_name, file_type, file_size, data_base64, uploaded_at)
@@ -207,14 +220,12 @@ class RuanganModel
             $stmt->execute([$pinjam_id, $name, $type, $size, $dataBase64]);
             $uploaded = true;
         }
-
         if ($uploaded) {
             $this->cache->delete("booking_history_user_*");
             $this->cache->delete("booking_notulen_{$pinjam_id}");
         }
         return $uploaded;
     }
-
     public function getNotulenFilesByPinjam($pinjam_id)
     {
         $cacheKey = "booking_notulen_{$pinjam_id}";
@@ -222,22 +233,18 @@ class RuanganModel
         if ($cached !== null) {
             return $cached;
         }
-
         $stmt = $this->pdo->prepare("SELECT * FROM {$this->tableNotulen} WHERE pinjam_id = ?");
         $stmt->execute([$pinjam_id]);
         $files = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         $this->cache->set($cacheKey, $files, 600); // 10 menit
         return $files;
     }
-
     public function getNotulenFileById($file_id)
     {
         $stmt = $this->pdo->prepare("SELECT * FROM {$this->tableNotulen} WHERE id = ?");
         $stmt->execute([$file_id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
-
     public function markAsFinished($pinjam_id)
     {
         $stmt = $this->pdo->prepare("
@@ -246,58 +253,43 @@ class RuanganModel
             WHERE id = ?
         ");
         $success = $stmt->execute([$pinjam_id]);
-
         if ($success) {
             $this->cache->delete("booking_history_user_*");
             $this->cache->delete("approved_bookings_room_*");
         }
         return $success;
     }
-
     // ===============================
-    // Get booking history — FIX N+1 dengan JOIN
-        public function getBookingHistory($user, $filter = 'semua')
-        {
+    // Get booking history — tanpa JOIN, gunakan snapshot & GROUP_CONCAT untuk notulen
+    public function getBookingHistory($user, $filter) {
             $role = $user['role'] ?? 'peminjam';
             $userId = $user['id_user'];
 
-            // 🔹 Tentukan cache key berdasar role dan filter
-            $cacheKey = "booking_history_{$role}_{$userId}_{$filter}";
-            $cached = $this->cache->get($cacheKey);
-            if ($cached !== null) return $cached;
-
-            // 🔹 Query dasar
             $sql = "
-                SELECT 
-                    pr.*, 
-                    u.nama AS nama_user, 
-                    u.role AS role_user,
-                    r.ruangan_name,
+                SELECT
+                    pr.*,
+                    pr.nama_user_snapshot AS nama_user,
+                    '{$role}' AS role_user,
+                    pr.nama_ruangan_snapshot AS ruangan_name,
                     GROUP_CONCAT(
                         CONCAT(nf.id, '|', nf.file_name, '|', nf.file_type, '|', nf.file_size, '|', nf.data_base64)
                         SEPARATOR '||'
                     ) AS notulen_raw
                 FROM {$this->tablePinjam} pr
-                JOIN {$this->tableUser} u ON pr.user_id = u.id_user
-                JOIN {$this->tableRuangan} r ON pr.ruangan_id = r.id
                 LEFT JOIN {$this->tableNotulen} nf ON nf.pinjam_id = pr.id
                 WHERE 1=1
             ";
 
             $params = [];
 
-            // 🔹 Filter berdasarkan role
+            // 🔹 Filter role
             if ($role === 'peminjam') {
-                // Hanya data miliknya sendiri
                 $sql .= " AND pr.user_id = ?";
                 $params[] = $userId;
-            } elseif (in_array($role, ['administrator', 'petugas'])) {
-                // Semua data dari user dengan role 'peminjam'
-                $sql .= " AND u.role = 'peminjam'";
             }
 
-            // 🔹 Filter status — hanya berlaku untuk peminjam
-            if ($role === 'peminjam' && $filter !== 'semua') {
+            // 🔹 Filter status — berlaku untuk semua role (biar admin/petugas juga bisa filter)
+            if ($filter !== 'semua') {
                 $sql .= " AND pr.status = ?";
                 $params[] = $filter;
             }
@@ -308,7 +300,6 @@ class RuanganModel
             $stmt->execute($params);
             $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // 🔹 Format ulang data notulen
             foreach ($rows as &$row) {
                 $notulen = [];
                 if (!empty($row['notulen_raw'])) {
@@ -331,11 +322,11 @@ class RuanganModel
                 unset($row['notulen_raw']);
             }
 
-            // 🔹 Simpan ke cache selama 2 menit
-            $this->cache->set($cacheKey, $rows, 120);
+            // 🔹 Nonaktifkan penyimpanan cache sementara
+            // $this->cache->set($cacheKey, $rows, 120);
 
             return $rows;
-        }
+    }
 
     // ===============================
     // Get approved bookings by room (cached)
@@ -346,7 +337,6 @@ class RuanganModel
         if ($cached !== null) {
             return $cached;
         }
-
         $stmt = $this->pdo->prepare("
             SELECT id, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, user_id
             FROM {$this->tablePinjam}
@@ -355,11 +345,9 @@ class RuanganModel
         ");
         $stmt->execute([$ruangan_id]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
         $this->cache->set($cacheKey, $data, 300); // 5 menit
         return $data;
     }
-
     // ===============================
     // Get expired bookings
     public function getExpiredBookings()

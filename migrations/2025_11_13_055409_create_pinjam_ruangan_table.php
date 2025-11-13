@@ -1,11 +1,13 @@
 <?php
 return [
-    "table" => "Pinjam_Ruangan",
+    "table" => "pinjam_ruangan",
     "up" => "
-        CREATE TABLE IF NOT EXISTS Pinjam_Ruangan (
+        CREATE TABLE IF NOT EXISTS pinjam_ruangan (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
+            nama_user_snapshot VARCHAR(100) NOT NULL,
             ruangan_id INT NOT NULL,
+            nama_ruangan_snapshot VARCHAR(100) NOT NULL,
             kegiatan VARCHAR(255) NOT NULL,
             tanggal_mulai DATE NOT NULL,
             tanggal_selesai DATE NOT NULL,
@@ -15,9 +17,11 @@ return [
             tanggal_selesai_rapat DATETIME NULL,
             keterangan TEXT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (user_id) REFERENCES User(id_user) ON DELETE CASCADE,
-            FOREIGN KEY (ruangan_id) REFERENCES Ruangan(id) ON DELETE CASCADE
+            INDEX idx_user_id (user_id),
+            INDEX idx_ruangan_id (ruangan_id),
+            INDEX idx_status (status),
+            INDEX idx_tanggal_mulai (tanggal_mulai)
         )
     ",
-    "down" => "DROP TABLE IF EXISTS Pinjam_Ruangan"
+    "down" => "DROP TABLE IF EXISTS pinjam_ruangan"
 ];

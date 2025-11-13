@@ -1,22 +1,18 @@
 <?php
 require_once __DIR__ . '/../models/StatistikModel.php';
-
 class StatistikController
 {
     private $model;
-
     public function __construct(PDO $pdo)
     {
         $this->model = new StatistikModel($pdo);
     }
-
     // ============================================================
     // 🔹 Statistik utama berdasarkan role user
     // ============================================================
     public function index()
     {
         header('Content-Type: application/json');
-
         // Ambil user dari session / cookie
         $user = $this->getUser();
         if (!$user) {
@@ -24,10 +20,8 @@ class StatistikController
             echo json_encode(["status" => "error", "message" => "Unauthorized"]);
             return;
         }
-
         $role = $user['role'];
         $id_user = $user['id_user'];
-
         switch ($role) {
             case 'administrator':
                 $data = [
@@ -41,7 +35,6 @@ class StatistikController
                     'peminjaman_per_status' => $this->model->countPeminjamanPerStatus(),
                 ];
                 break;
-
             case 'petugas':
                 $data = [
                     'total_peminjaman' => $this->model->countAllPeminjaman(),
@@ -51,7 +44,6 @@ class StatistikController
                     'total_ruangan' => $this->model->countRuangan(),
                 ];
                 break;
-
             case 'peminjam':
                 $data = [
                     'total_pengajuan' => $this->model->countUserPeminjaman($id_user),
@@ -59,20 +51,17 @@ class StatistikController
                     'total_ditolak' => $this->model->countUserPeminjamanByStatus($id_user, 'ditolak'),
                 ];
                 break;
-
             default:
                 http_response_code(403);
                 echo json_encode(["status" => "error", "message" => "Role tidak dikenali"]);
                 return;
         }
-
         echo json_encode([
             "status" => "success",
             "role" => $role,
             "data" => $data
         ]);
     }
-
     // ============================================================
     // 🔹 Helper: ambil user dari cookie (misal: user_info)
     // ============================================================

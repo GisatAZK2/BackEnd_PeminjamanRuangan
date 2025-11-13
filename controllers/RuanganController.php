@@ -1,20 +1,18 @@
+
 <?php
 require_once __DIR__ . '/../models/RuanganModel.php';
 require_once __DIR__ . '/../middleware/AuthMiddleware.php';
-
 class RuanganController
 {
     private $model;
     private $pdo;
     private $cache;
-
     public function __construct(PDO $pdo, $cache)
     {
         $this->pdo = $pdo;
         $this->cache = $cache;
         $this->model = new RuanganModel($pdo, $cache);
     }
-
     private function getUser()
     {
         if (isset($_COOKIE['user_info'])) {
@@ -27,7 +25,6 @@ class RuanganController
         }
         return null;
     }
-
     private function sendResponse($status, $message, $data = null, $code = 200)
     {
         http_response_code($code);
@@ -35,7 +32,6 @@ class RuanganController
         echo json_encode(['status' => $status, 'message' => $message, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
-
     // 🟦 Tambahkan ruangan
     public function addRoom()
     {
@@ -56,7 +52,6 @@ class RuanganController
             return $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
         }
     }
-
     // 🟩 GET /api/ruangan
     public function getroomAll()
     {
@@ -67,7 +62,6 @@ class RuanganController
             $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
         }
     }
-
     // 🟦 GET /api/ruangan/{id}
     public function getroomById($id)
     {
@@ -82,7 +76,6 @@ class RuanganController
             $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
         }
     }
-
     // 🟨 PUT /api/ruangan/{id}
     public function updateRoom($id)
     {
@@ -91,7 +84,6 @@ class RuanganController
         if (!isset($input['ruangan_name']) || empty(trim($input['ruangan_name']))) {
             return $this->sendResponse('error', 'Nama ruangan wajib diisi.', null, 400);
         }
-
         $ruangan_name = trim($input['ruangan_name']);
         try {
             $success = $this->model->updateRoom($id, $ruangan_name);
@@ -104,7 +96,6 @@ class RuanganController
             $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
         }
     }
-
     // 🟥 DELETE /api/ruangan/{id}
     public function deleteRoom($id)
     {
@@ -120,7 +111,6 @@ class RuanganController
             $this->sendResponse('error', 'Database error: ' . $e->getMessage(), null, 500);
         }
     }
-
     // create booking with transaction + lock
     public function createBooking()
     {
@@ -130,12 +120,9 @@ class RuanganController
         }
         $data = json_decode(file_get_contents('php://input'), true);
         if (!$data) return $this->sendResponse('error', 'Data pengajuan tidak ditemukan.', null, 400);
-
         $required = ['ruangan_id','kegiatan','tanggal_mulai','tanggal_selesai','jam_mulai','jam_selesai'];
         foreach ($required as $f) if (empty($data[$f])) return $this->sendResponse('error', "Field {$f} wajib diisi.", null, 400);
-
         $data['user_id'] = $user['id_user'];
-
         try {
             $this->pdo->beginTransaction();
             $available = $this->model->isRoomAvailableForUpdate(
@@ -162,7 +149,6 @@ class RuanganController
             return $this->sendResponse('error','Terjadi kesalahan server.', null, 500);
         }
     }
-
     public function updateStatus($id)
     {
         $user = $this->getUser();
@@ -195,24 +181,19 @@ class RuanganController
             return $this->sendResponse('error','Terjadi kesalahan server.', null, 500);
         }
     }
-
             public function markFinished($pinjam_id)
         {
             $user = $this->getUser();
             if (!$user || ($user['role'] ?? '') !== 'peminjam')
                 return $this->sendResponse('error', 'Hanya peminjam yang dapat menyelesaikan rapat.', null, 403);
-
             $booking = $this->model->getBookingById($pinjam_id);
             if (!$booking)
                 return $this->sendResponse('error', 'Data pinjaman tidak ditemukan.', null, 404);
-
             if (($booking['status'] ?? '') !== 'disetujui')
                 return $this->sendResponse('error', 'Hanya rapat dengan status disetujui yang dapat diselesaikan.', null, 400);
-
             // 🔹 File menjadi opsional
             if (!empty($_FILES)) {
                 $fileField = null;
-
                 if (isset($_FILES['files']) && is_array($_FILES['files']['name'])) {
                     $fileField = $_FILES['files'];
                 } elseif (isset($_FILES['file'])) {
@@ -220,16 +201,13 @@ class RuanganController
                 } else {
                     $fileField = reset($_FILES);
                 }
-
                 $ok = $this->model->uploadNotulenMulti($pinjam_id, $fileField);
                 if (!$ok)
                     return $this->sendResponse('error', 'Gagal mengunggah file. Pastikan ukuran < 16MB.', null, 500);
             }
-
             $this->model->markAsFinished($pinjam_id);
             $this->sendResponse('success', 'Rapat selesai' . (!empty($_FILES) ? ' & file notulen berhasil diunggah.' : '.'));
         }
-
     public function getBookingHistory()
     {
         $user = $this->getUser();
@@ -237,24 +215,19 @@ class RuanganController
         $filter = $_GET['filter'] ?? 'semua';
         $allowed = ['semua','pending','disetujui','ditolak','selesai'];
         if (!in_array($filter,$allowed)) $filter = 'semua';
-
         $data = $this->model->getBookingHistory($user, $filter);
         $this->sendResponse('success','Histori peminjaman berhasil diambil.', $data);
     }
-
     public function downloadNotulen($file_id)
     {
         $user = $this->getUser();
         if (!$user) return $this->sendResponse('error','Unauthorized', null, 401);
-
         $file = $this->model->getNotulenFileById($file_id);
         if (!$file) return $this->sendResponse('error','File tidak ditemukan.', null, 404);
-
         $booking = $this->model->getBookingById($file['pinjam_id']);
         if (($user['role'] ?? '') === 'peminjam' && $booking['user_id'] != $user['id_user']) {
             return $this->sendResponse('error','Akses ditolak.', null, 403);
         }
-
         $payload = [
             'id' => $file['id'],
             'name' => $file['file_name'],
@@ -264,16 +237,13 @@ class RuanganController
         ];
         return $this->sendResponse('success','File ditemukan.', $payload);
     }
-
     public function getRoomAvailability()
     {
         $ruangan_id = isset($_GET['ruangan_id']) ? intval($_GET['ruangan_id']) : 0;
         if (!$ruangan_id) return $this->sendResponse('error','ruangan_id wajib.', null, 400);
-
         $data = $this->model->getApprovedBookingsByRoom($ruangan_id);
         return $this->sendResponse('success','Availabilities fetched.', $data);
     }
-
     public function autoMarkFinished()
     {
         $expired = $this->model->getExpiredBookings();

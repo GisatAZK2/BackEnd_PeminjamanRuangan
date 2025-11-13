@@ -1,14 +1,49 @@
 <?php
 class UserSeeder {
     private $pdo;
-    public function __construct($pdo) { $this->pdo = $pdo; }
+    public function __construct($pdo) { 
+        $this->pdo = $pdo; 
+    }
 
     public function run() {
-        $sql = "INSERT INTO User (username, nama, nomor_telepon, email, password, id_divisi, role) VALUES
-			('admin01', 'Administrator Utama', '081234567890', 'admin@example.com', MD5('admin123'), 1, 'administrator'),
-			('petugas01', 'Petugas Gudang', '082345678901', 'petugas@example.com', MD5('petugas123'), 2, 'petugas'),
-			('anggota01', 'Anggota Perpustakaan', '083456789012', 'anggota@example.com', MD5('anggota123'), 3, 'peminjam');";
-        $this->pdo->exec($sql);
-        echo "🌱 UserSeeder done!\n";
+        // Gunakan password_hash (bcrypt)
+        $plainPassword = 'admin123';
+        $hashedPassword = password_hash($plainPassword, PASSWORD_DEFAULT);
+
+        $sql = "
+            INSERT INTO user (
+                username, 
+                nama, 
+                nomor_telepon, 
+                email, 
+                password_hash, 
+                password_plain,
+                id_divisi, 
+                nama_divisi_snapshot, 
+                is_logged_in, 
+                is_pending_edit, 
+                role
+            ) VALUES (
+                'admin01',
+                'Administrator Utama',
+                '081234567890',
+                'admin@example.com',
+                :password_hash,
+                :password_plain,
+                1,
+                'Divisi Utama',
+                0,
+                0,
+                'administrator'
+            );
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([
+            ':password_hash' => $hashedPassword,
+            ':password_plain' => $plainPassword
+        ]);
+
+        echo "🌱 UserSeeder (administrator) done!\n";
     }
 }
