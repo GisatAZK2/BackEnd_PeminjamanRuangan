@@ -1,4 +1,3 @@
-
 <?php
 require_once __DIR__ . '/../models/RuanganModel.php';
 require_once __DIR__ . '/../middleware/AuthMiddleware.php';
@@ -209,15 +208,22 @@ class RuanganController
             $this->sendResponse('success', 'Rapat selesai' . (!empty($_FILES) ? ' & file notulen berhasil diunggah.' : '.'));
         }
     public function getBookingHistory()
-    {
-        $user = $this->getUser();
-        if (!$user) return $this->sendResponse('error','Unauthorized', null, 401);
-        $filter = $_GET['filter'] ?? 'semua';
-        $allowed = ['semua','pending','disetujui','ditolak','selesai'];
-        if (!in_array($filter,$allowed)) $filter = 'semua';
-        $data = $this->model->getBookingHistory($user, $filter);
-        $this->sendResponse('success','Histori peminjaman berhasil diambil.', $data);
+{
+    $user = $this->getUser();
+    if (!$user) return $this->sendResponse('error', 'Unauthorized', null, 401);
+
+    $filter = $_GET['filter'] ?? 'semua';
+    $allowed = ['semua', 'pending', 'disetujui', 'ditolak', 'selesai'];
+    if (!in_array($filter, $allowed)) $filter = 'semua';
+
+    // Tambahkan user_id jika peminjam
+    if ($user['role'] === 'peminjam') {
+        $_GET['user_id'] = $user['id_user']; // opsional, tapi aman
     }
+
+    $data = $this->model->getBookingHistory($user, $filter);
+    return $this->sendResponse('success', 'Histori peminjaman berhasil diambil.', $data);
+}
     public function downloadNotulen($file_id)
     {
         $user = $this->getUser();
