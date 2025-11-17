@@ -1,9 +1,5 @@
 <?php
 
-// Jalankan middleware global
-CorsMiddleware::handle();
-ApiKeyMiddleware::validate();
-
 // ========================================================
 // 🔓 Public routes (tanpa JWT)
 // ========================================================
@@ -52,6 +48,13 @@ Router::get('/api/downloadNotulen/{id}', ([RuanganController::class, 'downloadNo
 Router::get('/api/roomAvailability', ([RuanganController::class, 'getRoomAvailability']));
 Router::get('/api/GetHistory',([RuanganController::class, 'getBookingHistory']));
 Router::post('/api/AutoFinishRoom',([RuanganController::class, 'autoMarkFinished']));
+
+
+// Views FE
+Router::view('/', 'index');
+Router::view('/dashboard', 'dashboard');
+Router::view('/login', 'login');
+
 
 // ========================================================
 // 🚀 Jalankan router

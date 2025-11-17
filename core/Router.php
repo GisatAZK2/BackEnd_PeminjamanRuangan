@@ -43,6 +43,26 @@ class Router
         ];
     }
 
+    public static function view(string $path, string $viewName)
+{
+    self::$routes[] = [
+        'method' => 'GET',
+        'path' => rtrim($path, '/'),
+        'handler' => function () use ($viewName) {
+            $file = __DIR__ . '/../views/' . $viewName . '.php';
+
+            if (!file_exists($file)) {
+                http_response_code(404);
+                echo "View {$viewName} tidak ditemukan.";
+                return;
+            }
+
+            include $file;
+        }
+    ];
+}
+
+
     public static function dispatch()
     {
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);

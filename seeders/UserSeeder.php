@@ -31,7 +31,7 @@ class UserSeeder {
                 :password_hash,
                 :password_plain,
                 1,
-                'Divisi Utama',
+                'IT Support',
                 0,
                 0,
                 'administrator'
