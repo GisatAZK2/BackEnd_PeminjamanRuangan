@@ -5,12 +5,10 @@ class DivisiController
 {
     private $model;
     private $pdo;
-    private $cache;
-     public function __construct(PDO $pdo, $cache)
+     public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
-        $this->cache = $cache;
-        $this->model = new DivisiModel($pdo, $cache);
+        $this->model = new DivisiModel($pdo);
     }
     private function send($status, $msg, $data = null, $code = 200)
     {
