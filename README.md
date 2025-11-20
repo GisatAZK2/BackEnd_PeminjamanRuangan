@@ -497,7 +497,27 @@ files[]: (file1.pdf, file2.docx)
 
 **Query:** `?ruangan_id=1`
 
-**Response:** Array jadwal `disetujui`
+**Catatana : Hanya Ada Ketika Suatu Ruangan Telah Disteujui**
+
+**Response:**
+
+```json
+{
+    "status": "success",
+    "message": "Availabilities fetched.",
+    "data": [
+        {
+            "id": 4,
+            "tanggal_mulai": "2025-11-20",
+            "tanggal_selesai": "2025-11-24",
+            "jam_mulai": "09:00:00",
+            "jam_selesai": "11:00:00",
+            "user_id": 11
+        }
+    ]
+}
+
+```
 
 ---
 
