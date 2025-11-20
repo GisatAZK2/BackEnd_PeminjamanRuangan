@@ -340,7 +340,6 @@ public function getBookingHistory($user, $filter) {
     public function getApprovedBookingsByRoom($ruangan_id)
     {
         $cacheKey = "approved_bookings_room_{$ruangan_id}";
-        $cached = $this->cache->get($cacheKey);
         if ($cached !== null) {
             return $cached;
         }
@@ -352,7 +351,6 @@ public function getBookingHistory($user, $filter) {
         ");
         $stmt->execute([$ruangan_id]);
         $data = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $this->cache->set($cacheKey, $data, 300); // 5 menit
         return $data;
     }
     // ===============================
