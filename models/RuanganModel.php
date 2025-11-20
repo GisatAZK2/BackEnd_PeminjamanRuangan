@@ -340,9 +340,6 @@ public function getBookingHistory($user, $filter) {
     public function getApprovedBookingsByRoom($ruangan_id)
     {
         $cacheKey = "approved_bookings_room_{$ruangan_id}";
-        if ($cached !== null) {
-            return $cached;
-        }
         $stmt = $this->pdo->prepare("
             SELECT id, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, user_id
             FROM {$this->tablePinjam}
