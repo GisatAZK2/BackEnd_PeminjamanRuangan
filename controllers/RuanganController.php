@@ -111,8 +111,7 @@ class RuanganController
         }
     }
     // create booking with transaction + lock
-    public function createBooking()
-    {
+    public function createBooking(){
         $user = $this->getUser();
         if (!$user || ($user['role'] ?? '') !== 'peminjam') {
             return $this->sendResponse('error', 'Hanya peminjam yang bisa mengajukan.', null, 403);
@@ -247,7 +246,7 @@ class RuanganController
     {
         $ruangan_id = isset($_GET['ruangan_id']) ? intval($_GET['ruangan_id']) : 0;
         if (!$ruangan_id) return $this->sendResponse('error','ruangan_id wajib.', null, 400);
-        $data = $this->model->getApprovedBookingsByRoom($ruangan_id);
+        $data = $this->model->getListBookingsByRoom($ruangan_id);
         return $this->sendResponse('success','Availabilities fetched.', $data);
     }
     public function autoMarkFinished()

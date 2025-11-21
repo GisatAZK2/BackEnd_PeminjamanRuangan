@@ -10,19 +10,15 @@ class StatistikController
         $this->model = new StatistikModel($pdo);
     }
 
-    // ============================================================
-    // 🔹 GET /api/statistik — Statistik berdasarkan role user
-    // ============================================================
     public function index()
     {
         header('Content-Type: application/json');
 
-        // 🔸 Ambil data user dari cookie/session
         $user = $this->getUser();
         if (!$user) {
             http_response_code(401);
             echo json_encode(["status" => "error", "message" => "Unauthorized"]);
-            return;
+            exit;
         }
 
         $role = $user['role'] ?? null;
@@ -31,15 +27,22 @@ class StatistikController
         if (!$role) {
             http_response_code(403);
             echo json_encode(["status" => "error", "message" => "Role tidak ditemukan"]);
-            return;
+            exit;
         }
 
+        // ============================================================
+        // 🔹 DATA GLOBAL — Selalu Ada untuk Semua Role
+        // ============================================================
+        $global = [
+            'total_ruangan'    => $this->model->countRuangan(),
+            'today_bookings'   => $this->model->countTodayBookings(),
+            'ongoing'          => $this->model->countOngoing(),
+            'finished_today'   => $this->model->countFinishedToday(),
+        ];
+
         switch ($role) {
-            // ====================================================
-            // 👑 ADMINISTRATOR
-            // ====================================================
             case 'administrator':
-                $data = [
+                $data = array_merge([
                     'total_user' => $this->model->countUsers(),
                     'total_divisi' => $this->model->countDivisi(),
                     'total_ruangan' => $this->model->countRuangan(),
@@ -48,37 +51,30 @@ class StatistikController
                     'total_peminjam' => $this->model->countUsersByRole('peminjam'),
                     'peminjaman_per_hari' => $this->model->countPeminjamanPerHari(),
                     'peminjaman_per_status' => $this->model->countPeminjamanPerStatus(),
-                ];
+                ], $global);
                 break;
 
-            // ====================================================
-            // 🧰 PETUGAS
-            // ====================================================
             case 'petugas':
-                $data = [
+                $data = array_merge([
                     'total_peminjaman' => $this->model->countAllPeminjaman(),
                     'peminjaman_per_status' => $this->model->countPeminjamanPerStatus(),
                     'peminjaman_per_hari' => $this->model->countPeminjamanPerHari(),
                     'total_peminjam' => $this->model->countUsersByRole('peminjam'),
-                    'total_ruangan' => $this->model->countRuangan(),
-                ];
+                ], $global);
                 break;
 
-            // ====================================================
-            // 👤 PEMINJAM
-            // ====================================================
             case 'peminjam':
-                $data = [
+                $data = array_merge([
                     'total_pengajuan' => $this->model->countUserPeminjaman($id_user),
                     'total_disetujui' => $this->model->countUserPeminjamanByStatus($id_user, 'disetujui'),
                     'total_ditolak' => $this->model->countUserPeminjamanByStatus($id_user, 'ditolak'),
-                ];
+                ], $global);
                 break;
 
             default:
                 http_response_code(403);
                 echo json_encode(["status" => "error", "message" => "Role tidak dikenali"]);
-                return;
+                exit;
         }
 
         echo json_encode([
@@ -86,11 +82,9 @@ class StatistikController
             "role" => $role,
             "data" => $data
         ]);
+        exit;
     }
 
-    // ============================================================
-    // 🔹 Helper: ambil user dari cookie user_info
-    // ============================================================
     private function getUser()
     {
         if (!isset($_COOKIE['user_info'])) return null;

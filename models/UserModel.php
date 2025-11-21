@@ -1,18 +1,17 @@
 <?php
-use Psr\SimpleCache\CacheInterface;
+
 
 class UserModel
 {
     private $pdo;
-    private $cache;
+
     private $tableName = 'user';
     private $tableDivisiName = 'divisi';
     private $tablePinjam = 'pinjam_ruangan';
 
-    public function __construct(PDO $pdo, CacheInterface $cache)
+    public function __construct(PDO $pdo)
     {
         $this->pdo = $pdo;
-        $this->cache = $cache;
     }
 
     // ===============================
@@ -20,11 +19,6 @@ class UserModel
     // ===============================
     public function findByUsername(string $username)
     {
-        $cacheKey = "user_by_username_" . md5($username);
-        if ($this->cache->has($cacheKey)) {
-            return $this->cache->get($cacheKey);
-        }
-
         $stmt = $this->pdo->prepare("
             SELECT id_user, username, password_hash, role, nama, email, nomor_telepon, id_divisi, nama_divisi_snapshot, is_logged_in
             FROM {$this->tableName}
@@ -32,10 +26,6 @@ class UserModel
         ");
         $stmt->execute([$username]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($user) {
-            $this->cache->set($cacheKey, $user, 300); // 5 menit
-        }
         return $user;
     }
 
@@ -44,11 +34,7 @@ class UserModel
     // ===============================
     public function getUserById(int $id_user)
     {
-        $cacheKey = "user_by_id_" . $id_user;
-        if ($this->cache->has($cacheKey)) {
-            return $this->cache->get($cacheKey);
-        }
-
+        
         $stmt = $this->pdo->prepare("
             SELECT
                 u.id_user,
@@ -66,9 +52,6 @@ class UserModel
         $stmt->execute([$id_user]);
         $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($user) {
-            $this->cache->set($cacheKey, $user, 300);
-        }
         return $user;
     }
 
@@ -77,11 +60,6 @@ class UserModel
     // ===============================
     public function getAllUsers(?string $roleFilter = null)
     {
-        $cacheKey = "all_users_" . ($roleFilter ?? 'all');
-        if ($this->cache->has($cacheKey)) {
-            return $this->cache->get($cacheKey);
-        }
-
         if ($roleFilter) {
             $stmt = $this->pdo->prepare("
                 SELECT u.*, u.nama_divisi_snapshot AS nama_divisi
@@ -99,7 +77,6 @@ class UserModel
         }
 
         $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $this->cache->set($cacheKey, $users, 120); // 2 menit
         return $users;
     }
 
@@ -118,7 +95,6 @@ class UserModel
             $stmt->execute([$status, $id_user]);
             $this->pdo->commit();
 
-            $this->cache->delete("user_by_id_" . $id_user);
             return true;
         } catch (Exception $e) {
             $this->pdo->rollBack();
@@ -160,10 +136,6 @@ class UserModel
                 $data['role'] ?? 'peminjam'
             ]);
 
-            if ($result) {
-                $this->cache->delete("all_users_all");
-                $this->cache->delete("all_users_peminjam");
-            }
 
             $this->pdo->commit();
             return $result;
@@ -212,12 +184,8 @@ class UserModel
                 if (isset($data['nama'])) {
                     $syncStmt = $this->pdo->prepare("UPDATE {$this->tablePinjam} SET nama_user_snapshot = ? WHERE user_id = ?");
                     $syncStmt->execute([$data['nama'], $id_user]);
-                    $this->cache->delete("booking_history_user_*");
                 }
 
-                $this->cache->delete("user_by_id_" . $id_user);
-                $this->cache->delete("all_users_all");
-                $this->cache->delete("all_users_peminjam");
             }
 
             $this->pdo->commit();
@@ -232,19 +200,37 @@ class UserModel
     // ===============================
     // Hapus user (snapshot tetap ada di pinjam_ruangan)
     // ===============================
+
     public function deleteUser(int $id_user)
-    {
-        $stmt = $this->pdo->prepare("DELETE FROM {$this->tableName} WHERE id_user = ?");
-        $result = $stmt->execute([$id_user]);
+{
+    try {
+        $this->pdo->beginTransaction();
+
+        $stmtBooking = $this->pdo->prepare("
+            DELETE FROM pinjam_ruangan 
+            WHERE user_id = ? AND (status = 'disetujui' OR status = 'pending')   
+        ");
+        $stmtBooking->execute([$id_user]);
+
+        // 2. Hapus user
+        $stmtUser = $this->pdo->prepare("
+            DELETE FROM {$this->tableName} WHERE id_user = ?
+        ");
+        $result = $stmtUser->execute([$id_user]);
 
         if ($result) {
-            $this->cache->delete("user_by_id_" . $id_user);
-            $this->cache->delete("all_users_all");
-            $this->cache->delete("all_users_peminjam");
+            $this->pdo->commit();
+             return true;
         }
-        return $result;
-    }
 
+        $this->pdo->rollBack();
+        return false;
+
+    } catch (Exception $e) {
+        $this->pdo->rollBack();
+        throw $e;
+    }
+}
     // ===============================
     // Mark user as pending edit (untuk request edit dari petugas)
     // ===============================

@@ -122,53 +122,63 @@ class RuanganModel
 }
     // ===============================
     // Cek ketersediaan ruangan
-    public function isRoomAvailable($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
-    {
-        $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) FROM {$this->tablePinjam}
-            WHERE ruangan_id = ?
-              AND status IN ('pending','disetujui')
-              AND NOT (
-                (tanggal_selesai < ?)
-                OR (tanggal_mulai > ?)
-                OR (jam_selesai <= ?)
-                OR (jam_mulai >= ?)
-              )
-        ");
-        $stmt->execute([
-            $ruangan_id,
-            $tanggal_mulai,
-            $tanggal_selesai,
-            $jam_mulai,
-            $jam_selesai
-        ]);
-        return $stmt->fetchColumn() == 0;
-    }
-    public function isRoomAvailableForUpdate($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
-    {
-        $sql = "
-            SELECT id FROM {$this->tablePinjam}
-            WHERE ruangan_id = ?
-              AND status IN ('pending','disetujui')
-              AND NOT (
-                (tanggal_selesai < ?)
-                OR (tanggal_mulai > ?)
-                OR (jam_selesai <= ?)
-                OR (jam_mulai >= ?)
-              )
-            FOR UPDATE
-        ";
-        $stmt = $this->pdo->prepare($sql);
-        $stmt->execute([
-            $ruangan_id,
-            $tanggal_mulai,
-            $tanggal_selesai,
-            $jam_mulai,
-            $jam_selesai
-        ]);
-        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return count($rows) === 0;
-    }
+   // ================= MODEL =================
+
+// Cek ketersediaan ruangan — VERSI BARU
+public function isRoomAvailable($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai)
+{
+    $stmt = $this->pdo->prepare("
+        SELECT COUNT(*) FROM {$this->tablePinjam}
+        WHERE ruangan_id = ?
+          AND NOT (
+              tanggal_selesai < ? OR                    -- booking lama selesai sebelum baru mulai
+              tanggal_mulai   > ? OR                    -- booking lama mulai setelah baru selesai
+              jam_selesai    <= ? OR                    -- jam lama selesai sebelum/sebelum jam baru mulai
+              jam_mulai      >= ?                       -- jam lama mulai setelah/setelah jam baru selesai
+          )
+    ");
+
+    $stmt->execute([
+        $ruangan_id,
+        $tanggal_mulai,   // tanggal_selesai < tanggal_mulai baru
+        $tanggal_selesai, // tanggal_mulai   > tanggal_selesai baru
+        $jam_mulai,       // jam_selesai    <= jam_mulai baru
+        $jam_selesai      // jam_mulai      >= jam_selesai baru
+    ]);
+
+    return $stmt->fetchColumn() == 0; // true = tersedia
+}
+
+// Versi untuk update (jika nanti ada edit booking, exclude booking itu sendiri)
+public function isRoomAvailableForUpdate($ruangan_id, $tanggal_mulai, $tanggal_selesai, $jam_mulai, $jam_selesai, $exclude_id = null)
+{
+    $sql = "
+        SELECT COUNT(*) FROM {$this->tablePinjam}
+        WHERE ruangan_id = ?
+          AND status = 'disetujui'
+          AND (? IS NULL OR id != ?)   -- exclude booking sendiri saat edit
+          AND NOT (
+              tanggal_selesai < ? OR
+              tanggal_mulai   > ? OR
+              jam_selesai    <= ? OR
+              jam_mulai      >= ?
+          )
+    ";
+
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute([
+        $ruangan_id,
+        $exclude_id, $exclude_id,
+        $tanggal_mulai,
+        $tanggal_selesai,
+        $jam_mulai,
+        $jam_selesai
+    ]);
+
+    return $stmt->fetchColumn() == 0;
+}
+
+
     // ===============================
     // Get booking (gunakan snapshot, tanpa JOIN)
     public function getBookingById($id)
@@ -337,13 +347,12 @@ public function getBookingHistory($user, $filter) {
 
     // ===============================
     // Get approved bookings by room (cached)
-    public function getApprovedBookingsByRoom($ruangan_id)
+    public function getListBookingsByRoom($ruangan_id)
     {
-        $cacheKey = "approved_bookings_room_{$ruangan_id}";
         $stmt = $this->pdo->prepare("
             SELECT id, tanggal_mulai, tanggal_selesai, jam_mulai, jam_selesai, user_id
             FROM {$this->tablePinjam}
-            WHERE ruangan_id = ? AND status = 'disetujui'
+            WHERE ruangan_id = ? AND (status = 'disetujui' OR status = 'pending')
             ORDER BY tanggal_mulai ASC, jam_mulai ASC
         ");
         $stmt->execute([$ruangan_id]);

@@ -75,4 +75,32 @@ class StatistikModel
         $stmt->execute([$user_id, $status]);
         return $stmt->fetchColumn();
     }
+
+    public function countTodayBookings()
+{
+    $today = date('Y-m-d');
+    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE DATE(created_at) = ?");
+    $stmt->execute([$today]);
+    return $stmt->fetchColumn();
+}
+
+public function countOngoing()
+{
+    $now = date('Y-m-d H:i:s');
+    $sql = "SELECT COUNT(*) FROM pinjam_ruangan 
+            WHERE status = 'disetujui' 
+              AND CONCAT(tanggal_mulai, ' ', jam_mulai) <= ? 
+              AND CONCAT(tanggal_selesai, ' ', jam_selesai) >= ?";
+    $stmt = $this->pdo->prepare($sql);
+    $stmt->execute([$now, $now]);
+    return $stmt->fetchColumn();
+}
+
+public function countFinishedToday()
+{
+    $today = date('Y-m-d');
+    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE status = 'selesai' AND DATE(tanggal_selesai_rapat) = ?");
+    $stmt->execute([$today]);
+    return $stmt->fetchColumn();
+}
 }

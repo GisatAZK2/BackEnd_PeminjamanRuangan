@@ -51,12 +51,15 @@ Router::post('/api/AutoFinishRoom',([RuanganController::class, 'autoMarkFinished
 
 
 // Views FE
-Router::view('/', 'index');
-Router::view('/dashboard', 'dashboard');
-Router::view('/login', 'login');
-
+Router::view('/', '/pages/auth/Login');
+Router::view('/login', '/pages/auth/Login');
+Router::view('/dashboard', '/layout/main'); 
+Router::view('/admin/kelola_users', '/layout/main');
+Router::view('/admin/rooms', '/layout/main');
+Router::view('/booking', '/layout/main');
+Router::view('/history', '/layout/main');
 
 // ========================================================
 // 🚀 Jalankan router
 // ========================================================
-Router::dispatch($pdo , $cache);
+Router::dispatch();
