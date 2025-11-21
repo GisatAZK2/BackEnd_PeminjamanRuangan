@@ -55,4 +55,4 @@
         </div>
     </div>
     
-<script data-script-page src="/public/js/pages/admin/rooms.js"></script>
+<script data-script-page src="/public/js/Pages/admin/rooms.js"></script>

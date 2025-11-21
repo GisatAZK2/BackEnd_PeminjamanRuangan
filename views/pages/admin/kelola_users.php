@@ -51,5 +51,5 @@
 
     </div>
 
-    <script data-script-page src="/public/js/pages/admin/users.js"></script>
+    <script data-script-page src="/public/js/Pages/admin/users.js"></script>
 </body>

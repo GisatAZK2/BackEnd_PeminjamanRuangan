@@ -53,4 +53,4 @@
         </div>
     </div>
     
-<script data-script-page src="/public/js/pages/admin/divisions.js"></script>
+<script data-script-page src="/public/js/Pages/admin/divisions.js"></script>
