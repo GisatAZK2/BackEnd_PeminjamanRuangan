@@ -1,0 +1,988 @@
+{
+	"info": {
+		"_postman_id": "6d4e0d8f-a578-4bd9-968c-4cf1b5c1a6be",
+		"name": "User Controller API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32117293"
+	},
+	"item": [
+		{
+			"name": "Get All Users",
+			"item": [
+				{
+					"name": "As Administrator",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/users",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users"
+							],
+							"query": [
+								{
+									"key": "",
+									"value": null,
+									"disabled": true
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "As Petugas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/users",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Unauthorized (No Cookie)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Get Detail User",
+			"item": [
+				{
+					"name": "Own Detail (Any Role)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/detail",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"detail"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Other User as Admin",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/detail?id_user=9",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "id_user",
+									"value": "9"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Peminjam as Petugas",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/detail?id_user=6",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "id_user",
+									"value": "6"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid (Petugas Try Edit Admin)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/users/detail?id_user=admin_id",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"detail"
+							],
+							"query": [
+								{
+									"key": "id_user",
+									"value": "admin_id"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Add User",
+			"item": [
+				{
+					"name": "As Admin (Add Any Role)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\": \"newuser\", \"nama\": \"New User\", \"email\": \"new@example.com\", \"password\": \"pass123\", \"role\": \"petugas\", \"nomor_telepon\": \"123456\", \"id_divisi\": 1}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/add",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"add"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "As Petugas (Add Peminjam Only)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\": \"newpeminjam\", \"nama\": \"New Peminjam\", \"email\": \"peminjam@example.com\", \"password\": \"pass123\", \"role\": \"peminjam\", \"nomor_telepon\": \"123456\", \"id_divisi\": 1}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/add",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"add"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid (Petugas Try Add Petugas)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\": \"invalid\", \"nama\": \"Invalid\", \"email\": \"invalid@example.com\", \"password\": \"pass123\", \"role\": \"petugas\", \"nomor_telepon\": \"123456\", \"id_divisi\": 1}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/add",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"add"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Missing Fields",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"username\": \"missing\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/add",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"add"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Request Edit (Petugas Only)",
+			"item": [
+				{
+					"name": "Valid Request",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"target_user\": 8}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/request-edit",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"request-edit"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid (Target Not Peminjam)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"target_user\": admin_id}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/request-edit",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"request-edit"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Change Role (Admin Only)",
+			"item": [
+				{
+					"name": "Valid Change",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"target_user\": 6, \"new_role\": \"petugas\"}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/change-role",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"change-role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid (Change Self)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"target_user\": 9, \"new_role\": \"petugas\"}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/change-role",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"change-role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid Role",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"target_user\": 123, \"new_role\": \"invalid\"}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/change-role",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"change-role"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "As Non-Admin",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"target_user\": 123, \"new_role\": \"petugas\"}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/change-role",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"change-role"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Update User",
+			"item": [
+				{
+					"name": "Update Self (Any Role)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": 9, \"nama\": \"SkiSuki Updated\", \"nomor_telepon\": \"087612433\", \"username\" : \"teriyaki\", \"email\": \"gitasasd@gmail.com\", \"password\" : \"Ambadaba1\", \"id_divisi\" : 2}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/update",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"update"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Update Other (Not Self)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": 9, \"nama\": \"SkiSuki Updated\", \"nomor_telepon\": \"087612433\", \"username\" : \"teriyaki\", \"email\": \"gitasasd@gmail.com\", \"password\" : \"Ambadaba1\", \"id_divisi\" : 2}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/update",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"update"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Petugas Update Peminjam",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": 9, \"nama\": \"SkiSuki Updated\", \"nomor_telepon\": \"087612433\", \"username\" : \"teriyaki\", \"email\": \"gitasasd@gmail.com\", \"password\" : \"Ambadaba1\", \"id_divisi\" : 2}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/update",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"update"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid (Petugas Try Update Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": 9, \"nama\": \"SkiSuki Updated\", \"nomor_telepon\": \"087612433\", \"username\" : \"teriyaki\", \"email\": \"gitasasd@gmail.com\", \"password\" : \"Ambadaba1\", \"id_divisi\" : 2}"
+						},
+						"url": {
+							"raw": "/api/users/update",
+							"path": [
+								"api",
+								"users",
+								"update"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid (Try Change Role Without Admin)",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": 9, \"nama\": \"SkiSuki Updated\", \"nomor_telepon\": \"087612433\", \"username\" : \"teriyaki\", \"email\": \"gitasasd@gmail.com\", \"password\" : \"Ambadaba1\", \"id_divisi\" : 2}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/update",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"update"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Try Update Self",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": \"id_user_admin_yang_sedang_digunakan\", \"nama\": \"SkiSuki Updated\", \"nomor_telepon\": \"087612433\", \"username\" : \"teriyaki\", \"email\": \"gitasasd@gmail.com\", \"password\" : \"Ambadaba1\", \"id_divisi\" : 2}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/update",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"update"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Delete User",
+			"item": [
+				{
+					"name": "Delete Self (Any Role)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": ""
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/delete",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"delete"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Delete Other",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": 10}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/delete",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"delete"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Invalid (Non-Admin Delete Other)",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_petugas_cookie_here",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": 11}"
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/users/delete",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"delete"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "Admin Delete Self",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Cookie",
+								"value": "user_info=encoded_admin_cookie_here"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\"id_user\": admin_id}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/users/delete",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"delete"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost",
+			"type": "string"
+		}
+	]
+}

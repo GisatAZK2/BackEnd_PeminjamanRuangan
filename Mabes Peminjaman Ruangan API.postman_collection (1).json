@@ -1,0 +1,409 @@
+{
+	"info": {
+		"_postman_id": "7cd69965-c512-4588-83f0-e30761bcf2f5",
+		"name": "Mabes Peminjaman Ruangan API",
+		"description": "Hai Sapapun Yang Membaca Document Ini , Maksih Ya\n\nInfo User\n\n\\===\n\n1\\. administrator\n\nusername = \"admin01\"\n\npassword = \"admin123\"\n\n\\===\n\n\\===\n\n2\\. petugas\n\nUsername = \"petugas01\"\n\npassword = \"petugas123\"\n\n\\===\n\n\\===\n\n3\\. peminjam\n\nusername = \"peminjam01\"\n\npassword = \"peminjam123\"\n\n\\===",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32117293"
+	},
+	"item": [
+		{
+			"name": "Login Admin",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "username",
+							"value": "anggota01",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "anggota123",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"api",
+						"login"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Add Room By Admin",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"ruangan_name\" : \"Ambatunat\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/AddRoom",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"AddRoom"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Booking Room By User \"Peminjam\"",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"ruangan_id\": 1,\n  \"kegiatan\" : \"Rapat Amba\",\n  \"tanggal_mulai\": \"2025-11-05\",\n  \"tanggal_selesai\": \"2025-11-06\",\n  \"jam_mulai\": \"09:00\",\n  \"jam_selesai\": \"11:00\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/BookingRoom",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"BookingRoom"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Approved Booking Room By \"Petugas\"",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"status\": \"disetujui\", \n  \"keterangan\": \"Ruangan siap digunakan.\"\n}\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/UpdateStatusBooking/2",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"UpdateStatusBooking",
+						"2"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Done Booking Room BY User \"Peminjam\"",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "files[]",
+							"type": "file",
+							"src": "/C:/Users/Gisat/Downloads/sample.pdf"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/RoomFinished/2",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"RoomFinished",
+						"2"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get History Data \"Pinjam Ruang\"",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": []
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/GetHistory",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"GetHistory"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get Room Available",
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "ruangan_id",
+							"value": "1",
+							"type": "text",
+							"disabled": true
+						}
+					]
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/roomAvailability?ruangan_id=1",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"roomAvailability"
+					],
+					"query": [
+						{
+							"key": "ruangan_id",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Get User Detail",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "{{BASE_URL}}/api/users/detail",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"users",
+						"detail"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GET All Users",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://prefix-checked-recommendations-rules.trycloudflare.com/api/users",
+					"protocol": "https",
+					"host": [
+						"prefix-checked-recommendations-rules",
+						"trycloudflare",
+						"com"
+					],
+					"path": [
+						"api",
+						"users"
+					]
+				},
+				"description": "Hanya **administrator** & **petugas**.\n- Admin: lihat semua kecuali dirinya\n- Petugas: hanya lihat peminjam"
+			},
+			"response": []
+		},
+		{
+			"name": "3. ADD User Only User \"Administrator\" And \"Petugas\"",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Cookie",
+						"value": "user_info={{cookie_user_info}}",
+						"type": "text",
+						"disabled": true
+					},
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"username\": \"admin01\",\n  \"nama\": \"Administrator Utama\",\n  \"email\": \"admin@gmail.com\",\n  \"password\": \"admin123\",\n  \"role\": \"administrator\",\n  \"id_divisi\" : 1,\n  \"nomor_telepon\" : \"0867558999\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://prefix-checked-recommendations-rules.trycloudflare.com/api/users/add",
+					"protocol": "https",
+					"host": [
+						"prefix-checked-recommendations-rules",
+						"trycloudflare",
+						"com"
+					],
+					"path": [
+						"api",
+						"users",
+						"add"
+					]
+				},
+				"description": "**Wajib**: `username`, `nama`, `email`, `password`, `role`\n\n**Petugas hanya bisa tambah role `peminjam`**\n\nContoh role: `administrator`, `petugas`, `peminjam`"
+			},
+			"response": []
+		},
+		{
+			"name": "Logout",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "x-api-key",
+						"value": "{{API_KEY}}",
+						"type": "text"
+					}
+				],
+				"body": {
+					"mode": "formdata",
+					"formdata": [
+						{
+							"key": "username",
+							"value": "petugas01",
+							"type": "text"
+						},
+						{
+							"key": "password",
+							"value": "petugas123",
+							"type": "text"
+						}
+					]
+				},
+				"url": {
+					"raw": "{{BASE_URL}}/api/logout",
+					"host": [
+						"{{BASE_URL}}"
+					],
+					"path": [
+						"api",
+						"logout"
+					],
+					"query": [
+						{
+							"key": "x",
+							"value": null,
+							"disabled": true
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}

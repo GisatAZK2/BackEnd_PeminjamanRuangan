@@ -1,0 +1,345 @@
+{
+	"info": {
+		"_postman_id": "a0590152-4d21-41a9-9c7f-e716348409f0",
+		"name": "Divisi API (Admin Only)",
+		"description": "API untuk mengelola data divisi. Hanya dapat diakses oleh role **administrator**.\n\n**Base URL**: `http://localhost:8000` (ubah di Environment)\n**Auth**: Bearer Token dengan variabel `{{token}}`",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "32117293"
+	},
+	"item": [
+		{
+			"name": "Divisi",
+			"item": [
+				{
+					"name": "Get All Divisi",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/api/divisi",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"api",
+								"divisi"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/divisi",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"divisi"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"Daftar divisi diambil.\",\n  \"data\": [\n    {\n      \"id\": 1,\n      \"nama_divisi\": \"IT\"\n    },\n    {\n      \"id\": 2,\n      \"nama_divisi\": \"HR\"\n    }\n  ]\n}"
+						}
+					]
+				},
+				{
+					"name": "Add Divisi",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama_divisi\": \"Marketing\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/divisi",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"divisi"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{base_url}}/api/divisi",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"divisi"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"Divisi ditambahkan.\"\n}"
+						},
+						{
+							"name": "Error - Nama Wajib",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{base_url}}/api/divisi",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"divisi"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"status\": \"error\",\n  \"message\": \"Nama wajib diisi.\",\n  \"data\": null\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Divisi",
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nama_divisi\": \"IT Support\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{BASE_URL}}/api/divisi/1",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"divisi",
+								"1"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "PUT",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": ""
+								},
+								"url": {
+									"raw": "{{base_url}}/api/divisi/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"divisi",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"Divisi diperbarui.\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Delete Divisi",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}",
+								"type": "text",
+								"disabled": true
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							},
+							{
+								"key": "x-api-key",
+								"value": "{{API_KEY}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{BASE_URL}}/api/divisi/4",
+							"host": [
+								"{{BASE_URL}}"
+							],
+							"path": [
+								"api",
+								"divisi",
+								"4"
+							]
+						}
+					},
+					"response": [
+						{
+							"name": "Success",
+							"originalRequest": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{base_url}}/api/divisi/1",
+									"host": [
+										"{{base_url}}"
+									],
+									"path": [
+										"api",
+										"divisi",
+										"1"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [],
+							"cookie": [],
+							"body": "{\n  \"status\": \"success\",\n  \"message\": \"Divisi dihapus.\"\n}"
+						}
+					]
+				}
+			]
+		}
+	],
+	"auth": {
+		"type": "bearer",
+		"bearer": [
+			{
+				"key": "token",
+				"value": "{{token}}",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:8000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string",
+			"description": "Masukkan JWT token admin di sini atau gunakan Environment"
+		}
+	]
+}
