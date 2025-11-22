@@ -8,9 +8,7 @@ class StatistikModel
         $this->pdo = $pdo;
     }
 
-    // ============================================================
-    // 🔹 Bagian untuk Administrator & Petugas
-    // ============================================================
+    // ==================== GLOBAL / ADMIN / PETUGAS ====================
     public function countUsers()
     {
         return $this->pdo->query("SELECT COUNT(*) FROM user")->fetchColumn();
@@ -45,6 +43,7 @@ class StatistikModel
             FROM pinjam_ruangan
             GROUP BY DATE(created_at)
             ORDER BY tanggal DESC
+            LIMIT 30
         ";
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -59,9 +58,7 @@ class StatistikModel
         return $this->pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    // ============================================================
-    // 🔹 Bagian untuk Peminjam
-    // ============================================================
+    // ==================== UNTUK PEMINJAM (hanya milik sendiri) ====================
     public function countUserPeminjaman($user_id)
     {
         $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE user_id = ?");
@@ -76,31 +73,43 @@ class StatistikModel
         return $stmt->fetchColumn();
     }
 
+    // ==================== TODAY BOOKINGS (GLOBAL) ====================
     public function countTodayBookings()
-{
-    $today = date('Y-m-d');
-    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE DATE(created_at) = ?");
-    $stmt->execute([$today]);
-    return $stmt->fetchColumn();
-}
+    {
+        $today = date('Y-m-d');
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE DATE(created_at) = ?");
+        $stmt->execute([$today]);
+        return $stmt->fetchColumn();
+    }
 
-public function countOngoing()
-{
-    $now = date('Y-m-d H:i:s');
-    $sql = "SELECT COUNT(*) FROM pinjam_ruangan 
-            WHERE status = 'disetujui' 
-              AND CONCAT(tanggal_mulai, ' ', jam_mulai) <= ? 
-              AND CONCAT(tanggal_selesai, ' ', jam_selesai) >= ?";
-    $stmt = $this->pdo->prepare($sql);
-    $stmt->execute([$now, $now]);
-    return $stmt->fetchColumn();
-}
+    // ==================== TODAY BOOKINGS KHUSUS USER (untuk peminjam) ====================
+    public function countTodayBookingsByUser($user_id)
+    {
+        $today = date('Y-m-d');
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE user_id = ? AND DATE(created_at) = ?");
+        $stmt->execute([$user_id, $today]);
+        return $stmt->fetchColumn();
+    }
 
-public function countFinishedToday()
-{
-    $today = date('Y-m-d');
-    $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE status = 'selesai' AND DATE(tanggal_selesai_rapat) = ?");
-    $stmt->execute([$today]);
-    return $stmt->fetchColumn();
-}
+    // ==================== SEDANG BERLANGSUNG (GLOBAL) ====================
+    public function countOngoing()
+    {
+        $now = date('Y-m-d H:i:s');
+        $sql = "SELECT COUNT(*) FROM pinjam_ruangan
+                WHERE status = 'disetujui'
+                  AND CONCAT(tanggal_mulai, ' ', jam_mulai) <= ?
+                  AND CONCAT(tanggal_selesai, ' ', jam_selesai) >= ?";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$now, $now]);
+        return $stmt->fetchColumn();
+    }
+
+    // ==================== SELESAI HARI INI (GLOBAL) ====================
+    public function countFinishedToday()
+    {
+        $today = date('Y-m-d');
+        $stmt = $this->pdo->prepare("SELECT COUNT(*) FROM pinjam_ruangan WHERE status = 'selesai' AND DATE(tanggal_selesai_rapat) = ?");
+        $stmt->execute([$today]);
+        return $stmt->fetchColumn();
+    }
 }

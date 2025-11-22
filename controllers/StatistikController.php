@@ -21,21 +21,23 @@ class StatistikController
             exit;
         }
 
-        $role = $user['role'] ?? null;
-        $id_user = $user['id_user'] ?? null;
+        $role     = $user['role'] ?? null;
+        $id_user  = $user['id_user'] ?? null;
 
-        if (!$role) {
+        if (!$role || !$id_user) {
             http_response_code(403);
-            echo json_encode(["status" => "error", "message" => "Role tidak ditemukan"]);
+            echo json_encode(["status" => "error", "message" => "Data user tidak lengkap"]);
             exit;
         }
 
         // ============================================================
-        // 🔹 DATA GLOBAL — Selalu Ada untuk Semua Role
+        // DATA GLOBAL — Selalu ada, tapi today_bookings disesuaikan per role
         // ============================================================
         $global = [
             'total_ruangan'    => $this->model->countRuangan(),
-            'today_bookings'   => $this->model->countTodayBookings(),
+            'today_bookings'   => ($role === 'peminjam')
+                ? $this->model->countTodayBookingsByUser($id_user)   // hanya milik dia
+                : $this->model->countTodayBookings(),               // semua user (admin & petugas)
             'ongoing'          => $this->model->countOngoing(),
             'finished_today'   => $this->model->countFinishedToday(),
         ];
@@ -43,12 +45,12 @@ class StatistikController
         switch ($role) {
             case 'administrator':
                 $data = array_merge([
-                    'total_user' => $this->model->countUsers(),
-                    'total_divisi' => $this->model->countDivisi(),
-                    'total_ruangan' => $this->model->countRuangan(),
-                    'total_peminjaman' => $this->model->countAllPeminjaman(),
-                    'total_petugas' => $this->model->countUsersByRole('petugas'),
-                    'total_peminjam' => $this->model->countUsersByRole('peminjam'),
+                    'total_user'          => $this->model->countUsers(),
+                    'total_divisi'        => $this->model->countDivisi(),
+                    'total_ruangan'       => $this->model->countRuangan(),
+                    'total_peminjaman'    => $this->model->countAllPeminjaman(),
+                    'total_petugas'       => $this->model->countUsersByRole('petugas'),
+                    'total_peminjam'      => $this->model->countUsersByRole('peminjam'),
                     'peminjaman_per_hari' => $this->model->countPeminjamanPerHari(),
                     'peminjaman_per_status' => $this->model->countPeminjamanPerStatus(),
                 ], $global);
@@ -56,18 +58,18 @@ class StatistikController
 
             case 'petugas':
                 $data = array_merge([
-                    'total_peminjaman' => $this->model->countAllPeminjaman(),
+                    'total_peminjaman'      => $this->model->countAllPeminjaman(),
                     'peminjaman_per_status' => $this->model->countPeminjamanPerStatus(),
-                    'peminjaman_per_hari' => $this->model->countPeminjamanPerHari(),
-                    'total_peminjam' => $this->model->countUsersByRole('peminjam'),
+                    'peminjaman_per_hari'   => $this->model->countPeminjamanPerHari(),
+                    'total_peminjam'        => $this->model->countUsersByRole('peminjam'),
                 ], $global);
                 break;
 
             case 'peminjam':
                 $data = array_merge([
-                    'total_pengajuan' => $this->model->countUserPeminjaman($id_user),
-                    'total_disetujui' => $this->model->countUserPeminjamanByStatus($id_user, 'disetujui'),
-                    'total_ditolak' => $this->model->countUserPeminjamanByStatus($id_user, 'ditolak'),
+                    'total_pengajuan'   => $this->model->countUserPeminjaman($id_user),
+                    'total_disetujui'   => $this->model->countUserPeminjamanByStatus($id_user, 'disetujui'),
+                    'total_ditolak'     => $this->model->countUserPeminjamanByStatus($id_user, 'ditolak'),
                 ], $global);
                 break;
 
@@ -79,17 +81,21 @@ class StatistikController
 
         echo json_encode([
             "status" => "success",
-            "role" => $role,
-            "data" => $data
+            "role"   => $role,
+            "data"   => $data
         ]);
         exit;
     }
 
     private function getUser()
     {
-        if (!isset($_COOKIE['user_info'])) return null;
+        if (!isset($_COOKIE['user_info'])) {
+            return null;
+        }
+
         $decoded = urldecode($_COOKIE['user_info']);
-        $user = json_decode($decoded, true);
+        $user    = json_decode($decoded, true);
+
         return is_array($user) ? $user : null;
     }
 }
